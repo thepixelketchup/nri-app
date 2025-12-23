@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { arrayRemove, arrayUnion, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { Calendar, Crown, Heart, MapPin, Share2, Users } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { STRINGS } from '../../constants/Strings';
 import { useAuth } from '../../context/AuthContext';
@@ -96,6 +96,36 @@ export default function EventDetailScreen() {
         } finally {
             setRsvpLoading(false);
         }
+    };
+
+    const handleOpenMap = () => {
+        if (!event?.location) return;
+        const encodedLocation = encodeURIComponent(event.location);
+
+        const googleUrl = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
+        const appleUrl = `maps:0,0?q=${encodedLocation}`;
+
+        const options: any[] = [
+            {
+                text: 'Google Maps',
+                onPress: () => Linking.openURL(googleUrl)
+            },
+        ];
+
+        if (Platform.OS === 'ios') {
+            options.push({
+                text: 'Apple Maps',
+                onPress: () => Linking.openURL(appleUrl)
+            });
+        }
+
+        options.push({ text: 'Cancel', style: 'cancel' });
+
+        Alert.alert(
+            'Open Map',
+            'Choose your preferred map application',
+            options
+        );
     };
 
     const handleInterest = async () => {
@@ -202,15 +232,19 @@ export default function EventDetailScreen() {
                         </View>
 
                         {/* Location */}
-                        <View className="flex-row items-center gap-4">
+                        <TouchableOpacity
+                            onPress={handleOpenMap}
+                            activeOpacity={0.7}
+                            className="flex-row items-center gap-4 active:scale-[0.98]"
+                        >
                             <View className="w-10 h-10 bg-indigo-50 rounded-full items-center justify-center">
                                 <MapPin size={20} color="#4f46e5" />
                             </View>
                             <View className="flex-1">
                                 <Text className="text-slate-900 font-bold text-base">{event.location}</Text>
-                                <Text className="text-slate-500 text-sm">{STRINGS.EVENTS.DETAILS.VIEW_ON_MAP}</Text>
+                                <Text className="text-indigo-600 text-sm font-semibold">{STRINGS.EVENTS.DETAILS.VIEW_ON_MAP}</Text>
                             </View>
-                        </View>
+                        </TouchableOpacity>
 
                         {/* Host - Moved here */}
                         <View className="flex-row items-center gap-4">

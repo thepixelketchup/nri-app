@@ -3,7 +3,8 @@ import * as Calendar from 'expo-calendar';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Calendar as CalendarIcon, Check, MapPin, MessageCircle, Share2 } from 'lucide-react-native';
-import { Alert, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Linking, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChatContext } from 'stream-chat-expo';
 import { STRINGS } from '../../constants/Strings';
@@ -11,12 +12,43 @@ import { useAuth } from '../../context/AuthContext';
 
 export default function EventSuccessScreen() {
     const router = useRouter();
-    const { id, title, date, location, imageUrl } = useLocalSearchParams<{
-        id: string; title: string; date: string; location: string; imageUrl: string;
+    const { id, title, date, location, imageUrl, description } = useLocalSearchParams<{
+        id: string; title: string; date: string; location: string; imageUrl: string; description: string;
     }>();
     const { client } = useChatContext();
     const { user } = useAuth();
     const { top } = useSafeAreaInsets();
+    const [loading, setLoading] = useState(false);
+
+    const handleOpenMap = () => {
+        if (!location) return;
+        const encodedLocation = encodeURIComponent(location as string);
+
+        const googleUrl = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
+        const appleUrl = `maps:0,0?q=${encodedLocation}`;
+
+        const options: any[] = [
+            {
+                text: 'Google Maps',
+                onPress: () => Linking.openURL(googleUrl)
+            },
+        ];
+
+        if (Platform.OS === 'ios') {
+            options.push({
+                text: 'Apple Maps',
+                onPress: () => Linking.openURL(appleUrl)
+            });
+        }
+
+        options.push({ text: 'Cancel', style: 'cancel' });
+
+        Alert.alert(
+            'Open Map',
+            'Choose your preferred map application',
+            options
+        );
+    };
 
     const eventDate = new Date(date!);
     const endDate = new Date(eventDate.getTime() + 3 * 60 * 60 * 1000);
@@ -164,15 +196,19 @@ export default function EventSuccessScreen() {
                         </View>
 
                         {/* Location */}
-                        <View className="flex-row items-center gap-4">
+                        <TouchableOpacity
+                            onPress={handleOpenMap}
+                            activeOpacity={0.7}
+                            className="flex-row items-center gap-4 active:scale-[0.98]"
+                        >
                             <View className="w-10 h-10 bg-indigo-50 rounded-full items-center justify-center">
                                 <MapPin size={20} color="#4f46e5" />
                             </View>
                             <View className="flex-1">
                                 <Text className="text-slate-900 font-bold text-base">{location}</Text>
-                                <Text className="text-slate-500 text-sm">{STRINGS.EVENTS.DETAILS.VIEW_ON_MAP}</Text>
+                                <Text className="text-indigo-600 text-sm font-semibold">{STRINGS.EVENTS.DETAILS.VIEW_ON_MAP}</Text>
                             </View>
-                        </View>
+                        </TouchableOpacity>
                     </View>
 
                     {/* Action Buttons */}
