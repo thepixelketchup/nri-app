@@ -1,16 +1,13 @@
-
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
-import { Calendar, MapPin, Users } from 'lucide-react-native';
+import { arrayRemove, arrayUnion, collection, doc, limit, onSnapshot, orderBy, query, updateDoc } from 'firebase/firestore';
+import { Calendar, Heart, MapPin, Users } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { STRINGS } from '../../constants/Strings';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../utils/firebaseConfig';
-
-
 
 export default function EventsScreen() {
     const router = useRouter();
@@ -19,10 +16,7 @@ export default function EventsScreen() {
     const [error, setError] = useState<string | null>(null);
     const { user } = useAuth();
 
-
-
     useEffect(() => {
-        const appId = 'nri-nl';
         const eventsRef = collection(db, 'public', 'data', 'events');
         // Limiting to 50 for performance as requested. FlatList handles rendering efficiently.
         const q = query(eventsRef, orderBy('eventDate', 'asc'), limit(50));
@@ -40,23 +34,55 @@ export default function EventsScreen() {
         return unsub;
     }, []);
 
+    const handleInterest = async (event: any) => {
+        if (!user) return;
+
+        const docRef = doc(db, 'public', 'data', 'events', event.id);
+        const isInterested = event.interestedIds?.includes(user.uid);
+
+        try {
+            await updateDoc(docRef, {
+                interestedIds: isInterested ? arrayRemove(user.uid) : arrayUnion(user.uid)
+            });
+        } catch (e) {
+            console.error("Interest update failed", e);
+        }
+    };
+
     const renderEventCard = ({ item }: { item: any }) => {
         const date = new Date(item.eventDate);
+        const isInterested = item.interestedIds?.includes(user?.uid);
+        const interestCount = item.interestedIds?.length || 0;
+
         return (
             <TouchableOpacity
                 activeOpacity={0.9}
                 onPress={() => router.push(`/events/${item.id}`)}
                 className="bg-white rounded-2xl border border-slate-100 shadow-sm mb-5 overflow-hidden"
             >
-                {/* Event Image */}
-                <View className="h-48 w-full relative">
-                    <Image
-                        source={{ uri: item.imageUrl || 'https://via.placeholder.com/400' }}
-                        className="w-full h-full"
-                        style={{ width: '100%', height: '100%' }}
-                        contentFit="cover"
-                        transition={500}
-                    />
+                {/* Event Image or Fallback */}
+                <View className="h-48 w-full relative bg-slate-100">
+                    {item.imageUrl ? (
+                        <Image
+                            source={{ uri: item.imageUrl }}
+                            className="w-full h-full"
+                            style={{ width: '100%', height: '100%' }}
+                            contentFit="cover"
+                            transition={500}
+                        />
+                    ) : (
+                        <View className="w-full h-full items-center justify-center bg-indigo-50">
+                            <Calendar size={48} color="#818cf8" strokeWidth={1.5} />
+                        </View>
+                    )}
+
+                    {/* Interest Button Overlay */}
+                    <TouchableOpacity
+                        onPress={() => handleInterest(item)}
+                        className="absolute top-3 right-3 h-8 w-8 bg-black/20 backdrop-blur-md rounded-full items-center justify-center border border-white/10"
+                    >
+                        <Heart size={16} color={isInterested ? "#ef4444" : "white"} fill={isInterested ? "#ef4444" : "transparent"} />
+                    </TouchableOpacity>
                 </View>
 
                 {/* Content */}
@@ -80,11 +106,21 @@ export default function EventsScreen() {
                         </View>
                     </View>
 
-                    <View className="mt-4 pt-3 border-t border-slate-50 flex-row items-center gap-2">
-                        <Users size={14} color="#64748b" />
-                        <Text className="text-xs text-slate-500 font-medium">
-                            {item.attendeeIds?.length > 0 ? `${item.attendeeIds.length} ${STRINGS.EVENTS.GOING_SUFFIX}` : STRINGS.EVENTS.BE_THE_FIRST}
-                        </Text>
+                    <View className="mt-4 pt-3 border-t border-slate-50 flex-row items-center gap-3">
+                        <View className="flex-row items-center gap-1.5">
+                            <Users size={14} color="#64748b" />
+                            <Text className="text-xs text-slate-500 font-medium">
+                                {item.attendeeIds?.length > 0 ? `${item.attendeeIds.length} ${STRINGS.EVENTS.GOING_SUFFIX}` : STRINGS.EVENTS.BE_THE_FIRST}
+                            </Text>
+                        </View>
+                        {interestCount > 0 && (
+                            <View className="flex-row items-center gap-1.5">
+                                <Heart size={12} color="#64748b" />
+                                <Text className="text-xs text-slate-500 font-medium">
+                                    {interestCount} {STRINGS.EVENTS.INTERESTED_SUFFIX}
+                                </Text>
+                            </View>
+                        )}
                     </View>
                 </View>
             </TouchableOpacity>
@@ -93,7 +129,6 @@ export default function EventsScreen() {
 
     return (
         <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-            {/* Header */}
             {/* Header - Minimal & Clean */}
             <View className="px-6 pt-4 pb-4 bg-white z-10 flex-row justify-between items-start">
                 <View>

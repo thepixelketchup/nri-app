@@ -104,14 +104,20 @@ export default function EventSuccessScreen() {
             <Stack.Screen options={{ headerShown: false }} />
             <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
                 {/* Hero Image (Consistent with Event Details) */}
-                <View className="h-72 w-full relative">
-                    <Image
-                        source={{ uri: imageUrl || 'https://via.placeholder.com/400' }}
-                        className="w-full h-full"
-                        style={{ width: '100%', height: '100%' }}
-                        contentFit="cover"
-                        transition={500}
-                    />
+                <View className="h-72 w-full relative bg-slate-900">
+                    {imageUrl ? (
+                        <Image
+                            source={{ uri: imageUrl }}
+                            className="w-full h-full"
+                            style={{ width: '100%', height: '100%' }}
+                            contentFit="cover"
+                            transition={500}
+                        />
+                    ) : (
+                        <View className="w-full h-full items-center justify-center bg-indigo-600">
+                            <CalendarIcon size={64} color="white" strokeWidth={1.5} />
+                        </View>
+                    )}
                     <View
                         className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-black/60 to-transparent flex-row justify-between items-start px-4"
                         style={{ paddingTop: top + 10 }}

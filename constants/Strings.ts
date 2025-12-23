@@ -2,10 +2,12 @@ export const STRINGS = {
     EVENTS: {
         HEADER_TITLE: 'Events',
         HEADER_SUBTITLE: "Discover what's happening nearby",
+        HOST_EVENT: 'Host an Event',
         NO_EVENTS: 'No upcoming events',
         LOADING_ERROR: 'Failed to load events',
         BE_THE_FIRST: 'Be the first!',
         GOING_SUFFIX: 'going',
+        INTERESTED_SUFFIX: 'interested',
 
         DETAILS: {
             GOING: 'Going',
@@ -49,6 +51,33 @@ export const STRINGS = {
                 SUCCESS_MSG: 'Event added to your calendar!',
                 FAIL_PREFIX: 'Failed to add to calendar: ',
                 ERROR_TITLE: 'Error',
+            }
+        },
+
+        REQUEST: {
+            TITLE: 'Host an Event',
+            SUBTITLE: 'Submit your event for review',
+            FORM: {
+                TITLE_LABEL: 'Event Title',
+                TITLE_PLACEHOLDER: 'e.g. Diwali Night 2024',
+                DATE_LABEL: 'Date & Time',
+                LOCATION_LABEL: 'Location',
+                LOCATION_PLACEHOLDER: 'e.g. Vondelpark, Amsterdam',
+                DESC_LABEL: 'Description',
+                DESC_PLACEHOLDER: 'Tell people what makes this event special...',
+                PRICE_LABEL: 'Price (€)',
+                PRICE_PLACEHOLDER: '0 for free',
+                SUBMIT_BTN: 'Submit Request',
+                SUBMITTING: 'Submitting...',
+            },
+            SUCCESS: {
+                TITLE: 'Request Submitted',
+                MSG: 'Thanks! Your event is under review and will appear once approved.',
+            },
+            ERROR: {
+                TITLE: 'Submission Failed',
+                MSG: 'Could not submit your request. Please try again.',
+                MISSING_FIELDS: 'Please fill in all required fields.',
             }
         }
     }
