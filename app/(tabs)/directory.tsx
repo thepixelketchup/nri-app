@@ -1,9 +1,9 @@
-import { View, Text, FlatList, Image, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useEffect, useState } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { ChevronRight, Filter, MapPin, Store } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import { FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { db } from '../../utils/firebaseConfig';
-import { Store, MapPin, ChevronRight, Filter } from 'lucide-react-native';
 
 const BUSINESS_CATEGORIES = [
     'All', 'Tiffins & Food', 'Grocery Stores', 'Accountants & Advisors', 'Fashion & Jewelry', 'Other Services'
@@ -15,8 +15,7 @@ export default function DirectoryScreen() {
     const [showFilters, setShowFilters] = useState(false);
 
     useEffect(() => {
-        const appId = 'default-app-id';
-        const marketRef = collection(db, 'artifacts', appId, 'public', 'data', 'market');
+        const marketRef = collection(db, 'public', 'data', 'market');
         // Using simple client-side filtering or logic for now as compound queries might need indices
         const q = query(marketRef, where('marketType', '==', 'business'));
 

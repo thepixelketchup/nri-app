@@ -1,6 +1,6 @@
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { Euro, FileText, Flag, GraduationCap, Heart, Megaphone } from 'lucide-react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Flag, Megaphone, FileText, Euro, Heart, GraduationCap } from 'lucide-react-native';
 
 const GUIDE_CATEGORIES = {
     'Start Here': { icon: Flag, color: 'bg-green-100', iconColor: '#16a34a', desc: 'Rules & getting started' },
@@ -11,7 +11,10 @@ const GUIDE_CATEGORIES = {
     'Schools': { icon: GraduationCap, color: 'bg-purple-100', iconColor: '#9333ea', desc: 'International vs Dutch schools' },
 };
 
+import { useRouter } from 'expo-router';
+
 export default function GuidesScreen() {
+    const router = useRouter();
     return (
         <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
             <View className="px-4 py-3 bg-white border-b border-slate-100">
@@ -23,7 +26,11 @@ export default function GuidesScreen() {
                     {Object.entries(GUIDE_CATEGORIES).map(([key, data]) => {
                         const Icon = data.icon;
                         return (
-                            <TouchableOpacity key={key} className="w-[48%] bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-4">
+                            <TouchableOpacity
+                                key={key}
+                                onPress={() => router.push(`/guides/${encodeURIComponent(key)}`)}
+                                className="w-[48%] bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-4 active:scale-95 transition-transform"
+                            >
                                 <View className={`w-10 h-10 rounded-full items-center justify-center ${data.color} mb-3`}>
                                     <Icon size={20} color={data.iconColor} />
                                 </View>
@@ -34,6 +41,8 @@ export default function GuidesScreen() {
                     })}
                 </View>
             </ScrollView>
+
+            {/* Use SafeAreaView edges to only cover top, letting bottom be handled by TabBar or natural scroll */}
         </SafeAreaView>
     );
 }

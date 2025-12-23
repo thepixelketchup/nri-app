@@ -1,9 +1,12 @@
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Globe, Map, ChevronRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../../context/AuthContext';
+import { arrayRemove, arrayUnion, doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { Check, Globe, Map } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useChatContext } from 'stream-chat-expo';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../utils/firebaseConfig';
 
 const GROUPS = {
     national: [
@@ -22,20 +25,57 @@ export default function CommunitiesScreen() {
     const router = useRouter();
     const { client } = useChatContext();
     const { user } = useAuth();
+    const [userData, setUserData] = useState<any>({ joinedGroups: [] });
 
-    const handleJoin = async (group: any) => {
-        if (!client || !user) return;
-
-        const channelType = 'messaging';
-        const channelId = group.id;
-
-        const channel = client.channel(channelType, channelId, {
-            name: group.name,
-            members: [user.uid],
+    // Fetch User Profile for Joined Groups
+    useEffect(() => {
+        if (!user) return;
+        // Refactored to root 'users' collection
+        const unsub = onSnapshot(doc(db, 'users', user.uid), (d) => {
+            if (d.exists()) setUserData(d.data());
+            else setUserData({ joinedGroups: [] });
         });
+        return unsub;
+    }, [user]);
 
-        await channel.watch();
-        router.push(`/channel/${channel.cid}`);
+    const handleJoin = async (group: any, type: 'national' | 'hub') => {
+        if (!client || !user || !client.userID) {
+            alert("Chat connecting...");
+            return;
+        }
+
+        const groupId = type === 'national' ? `national_${group.id}` : `hub_${group.id}`;
+        const isJoined = userData.joinedGroups?.includes(groupId);
+
+        // 1. Update Firestore Profile
+        const userRef = doc(db, 'users', user.uid);
+        try {
+            await setDoc(userRef, {
+                joinedGroups: isJoined ? arrayRemove(groupId) : arrayUnion(groupId)
+            }, { merge: true });
+        } catch (e) {
+            console.error(e);
+        }
+
+        // 2. Stream Channel Logic
+        // Only navigate if we are joining or already joined
+        if (!isJoined) {
+            const channelType = 'messaging';
+            const channelId = groupId; // Use the prefixed ID for stream consistency if feasible, or map it. 
+            // Ref code used group.id, but let's use the unique ID we constructing to avoid collisions
+
+            const channel = client.channel(channelType, channelId, {
+                name: group.name,
+                members: [user.uid],
+            } as any);
+
+            await channel.watch();
+            router.push(`/channel/${channel.cid}`);
+        } else {
+            // If already joined, just open chat
+            const channelId = groupId;
+            router.push(`/channel/messaging:${channelId}`);
+        }
     };
 
     return (
@@ -52,16 +92,28 @@ export default function CommunitiesScreen() {
                         <Text className="text-xs font-bold text-slate-500 uppercase">National Channels</Text>
                     </View>
                     <View className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-                        {GROUPS.national.map((g, i) => (
-                            <TouchableOpacity key={g.id} onPress={() => handleJoin(g)} className={`p-4 flex-row items-center gap-3 ${i !== 0 ? 'border-t border-slate-100' : ''}`}>
-                                <Text className="text-2xl">{g.icon}</Text>
-                                <View className="flex-1">
-                                    <Text className="font-bold text-slate-900 text-sm">{g.name}</Text>
-                                    <Text className="text-xs text-slate-500">{g.desc}</Text>
-                                </View>
-                                <ChevronRight size={16} color="#cbd5e1" />
-                            </TouchableOpacity>
-                        ))}
+                        {GROUPS.national.map((g, i) => {
+                            const isJoined = userData.joinedGroups?.includes(`national_${g.id}`);
+                            return (
+                                <TouchableOpacity key={g.id} onPress={() => handleJoin(g, 'national')} className={`p-4 flex-row items-center gap-3 ${i !== 0 ? 'border-t border-slate-100' : ''}`}>
+                                    <Text className="text-2xl">{g.icon}</Text>
+                                    <View className="flex-1">
+                                        <Text className="font-bold text-slate-900 text-sm">{g.name}</Text>
+                                        <Text className="text-xs text-slate-500">{g.desc}</Text>
+                                    </View>
+                                    {isJoined ? (
+                                        <View className="bg-green-100 px-3 py-1 rounded-full flex-row items-center gap-1">
+                                            <Check size={12} color="#15803d" />
+                                            <Text className="text-xs font-bold text-green-700">Joined</Text>
+                                        </View>
+                                    ) : (
+                                        <View className="bg-slate-100 px-3 py-1 rounded-full">
+                                            <Text className="text-xs font-bold text-slate-600">Join</Text>
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+                            )
+                        })}
                     </View>
                 </View>
 
@@ -72,16 +124,28 @@ export default function CommunitiesScreen() {
                         <Text className="text-xs font-bold text-slate-500 uppercase">Local Hubs</Text>
                     </View>
                     <View className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-                        {GROUPS.hubs.map((g, i) => (
-                            <TouchableOpacity key={g.id} onPress={() => handleJoin(g)} className={`p-4 flex-row items-center gap-3 ${i !== 0 ? 'border-t border-slate-100' : ''}`}>
-                                <Text className="text-2xl">{g.icon}</Text>
-                                <View className="flex-1">
-                                    <Text className="font-bold text-slate-900 text-sm">{g.name}</Text>
-                                    <Text className="text-xs text-slate-500">{g.city} • {g.desc}</Text>
-                                </View>
-                                <ChevronRight size={16} color="#cbd5e1" />
-                            </TouchableOpacity>
-                        ))}
+                        {GROUPS.hubs.map((g, i) => {
+                            const isJoined = userData.joinedGroups?.includes(`hub_${g.id}`);
+                            return (
+                                <TouchableOpacity key={g.id} onPress={() => handleJoin(g, 'hub')} className={`p-4 flex-row items-center gap-3 ${i !== 0 ? 'border-t border-slate-100' : ''}`}>
+                                    <Text className="text-2xl">{g.icon}</Text>
+                                    <View className="flex-1">
+                                        <Text className="font-bold text-slate-900 text-sm">{g.name}</Text>
+                                        <Text className="text-xs text-slate-500">{g.city} • {g.desc}</Text>
+                                    </View>
+                                    {isJoined ? (
+                                        <View className="bg-green-100 px-3 py-1 rounded-full flex-row items-center gap-1">
+                                            <Check size={12} color="#15803d" />
+                                            <Text className="text-xs font-bold text-green-700">Joined</Text>
+                                        </View>
+                                    ) : (
+                                        <View className="bg-slate-100 px-3 py-1 rounded-full">
+                                            <Text className="text-xs font-bold text-slate-600">Join</Text>
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+                            )
+                        })}
                     </View>
                 </View>
             </ScrollView>

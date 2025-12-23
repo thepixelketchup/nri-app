@@ -1,17 +1,16 @@
-import { View, Text, FlatList, Image, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useEffect, useState } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { db } from '../../utils/firebaseConfig';
 import { MapPin, ShoppingBag } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import { FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { db } from '../../utils/firebaseConfig';
 
 export default function MarketScreen() {
     const [items, setItems] = useState<any[]>([]);
     const [filter, setFilter] = useState('housing');
 
     useEffect(() => {
-        const appId = 'default-app-id';
-        const marketRef = collection(db, 'artifacts', appId, 'public', 'data', 'market');
+        const marketRef = collection(db, 'public', 'data', 'market');
         const q = query(marketRef, where('marketType', '==', filter));
 
         const unsub = onSnapshot(q, (sn) => {
