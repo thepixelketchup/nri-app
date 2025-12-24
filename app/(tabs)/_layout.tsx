@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { BookOpen, Calendar, Home, MessagesSquare, ShoppingBag, Store, Users2 } from 'lucide-react-native';
+import { Calendar, Home, MessageCircle, ShoppingBag, Store } from 'lucide-react-native';
 
 export default function TabLayout() {
     return (
@@ -18,8 +18,10 @@ export default function TabLayout() {
                 tabBarLabelStyle: {
                     fontSize: 10,
                     fontWeight: 'bold',
-                    marginTop: -5,
+                    marginTop: 0,
                 },
+                tabBarShowLabel: true,
+                tabBarHideOnKeyboard: true,
             }}
         >
             <Tabs.Screen
@@ -27,13 +29,6 @@ export default function TabLayout() {
                 options={{
                     title: 'Home',
                     tabBarIcon: ({ color }) => <Home color={color} size={24} />,
-                }}
-            />
-            <Tabs.Screen
-                name="guides"
-                options={{
-                    title: 'Guides',
-                    tabBarIcon: ({ color }) => <BookOpen color={color} size={24} />,
                 }}
             />
             <Tabs.Screen
@@ -46,7 +41,7 @@ export default function TabLayout() {
             <Tabs.Screen
                 name="market"
                 options={{
-                    title: 'Market',
+                    title: 'Marketplace',
                     tabBarIcon: ({ color }) => <ShoppingBag color={color} size={24} />,
                 }}
             />
@@ -58,19 +53,14 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
-                name="communities"
-                options={{
-                    title: 'Hubs',
-                    tabBarIcon: ({ color }) => <Users2 color={color} size={24} />,
-                }}
-            />
-            <Tabs.Screen
                 name="messages"
                 options={{
-                    title: 'Chats',
-                    tabBarIcon: ({ color }) => <MessagesSquare color={color} size={24} />,
+                    title: 'Messages',
+                    tabBarIcon: ({ color }) => <MessageCircle color={color} size={24} />,
                 }}
             />
+
+            {/* Hidden Tabs (accessible via routes but not in bar) */}
         </Tabs>
     );
 }

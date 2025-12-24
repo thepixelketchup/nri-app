@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { arrayRemove, arrayUnion, doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { Check, Globe, Map } from 'lucide-react-native';
+import { Check, ChevronLeft, Globe, Map } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,7 +30,6 @@ export default function CommunitiesScreen() {
     // Fetch User Profile for Joined Groups
     useEffect(() => {
         if (!user) return;
-        // Refactored to root 'users' collection
         const unsub = onSnapshot(doc(db, 'users', user.uid), (d) => {
             if (d.exists()) setUserData(d.data());
             else setUserData({ joinedGroups: [] });
@@ -58,11 +57,9 @@ export default function CommunitiesScreen() {
         }
 
         // 2. Stream Channel Logic
-        // Only navigate if we are joining or already joined
         if (!isJoined) {
             const channelType = 'messaging';
-            const channelId = groupId; // Use the prefixed ID for stream consistency if feasible, or map it. 
-            // Ref code used group.id, but let's use the unique ID we constructing to avoid collisions
+            const channelId = groupId;
 
             const channel = client.channel(channelType, channelId, {
                 name: group.name,
@@ -72,17 +69,22 @@ export default function CommunitiesScreen() {
             await channel.watch();
             router.push(`/channel/${channel.cid}`);
         } else {
-            // If already joined, just open chat
             const channelId = groupId;
             router.push(`/channel/messaging:${channelId}`);
         }
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
-            <View className="px-4 py-3 bg-white border-b border-slate-100">
-                <Text className="text-xl font-bold text-slate-900">Communities</Text>
-            </View>
+        <View className="flex-1 bg-slate-50">
+            {/* Header with Back Button */}
+            <SafeAreaView edges={['top']} className="bg-white">
+                <View className="px-4 py-3 border-b border-slate-100 flex-row items-center gap-3">
+                    <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 rounded-full bg-slate-50 items-center justify-center">
+                        <ChevronLeft size={24} color="#0f172a" />
+                    </TouchableOpacity>
+                    <Text className="text-xl font-bold text-slate-900">Join Communities</Text>
+                </View>
+            </SafeAreaView>
 
             <ScrollView className="p-4">
                 {/* National */}
@@ -149,6 +151,6 @@ export default function CommunitiesScreen() {
                     </View>
                 </View>
             </ScrollView>
-        </SafeAreaView>
+        </View>
     );
 }

@@ -1,4 +1,5 @@
-import { Euro, FileText, Flag, GraduationCap, Heart, Megaphone } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { ChevronLeft, Euro, FileText, Flag, GraduationCap, Heart, Megaphone } from 'lucide-react-native';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,15 +12,18 @@ const GUIDE_CATEGORIES = {
     'Schools': { icon: GraduationCap, color: 'bg-purple-100', iconColor: '#9333ea', desc: 'International vs Dutch schools' },
 };
 
-import { useRouter } from 'expo-router';
-
 export default function GuidesScreen() {
     const router = useRouter();
     return (
-        <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
-            <View className="px-4 py-3 bg-white border-b border-slate-100">
-                <Text className="text-xl font-bold text-slate-900">Dutch Survival Kit</Text>
-            </View>
+        <View className="flex-1 bg-slate-50">
+            <SafeAreaView edges={['top']} className="bg-white">
+                <View className="px-4 py-3 border-b border-slate-100 flex-row items-center gap-3">
+                    <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 rounded-full bg-slate-50 items-center justify-center">
+                        <ChevronLeft size={24} color="#0f172a" />
+                    </TouchableOpacity>
+                    <Text className="text-xl font-bold text-slate-900">Dutch Survival Kit</Text>
+                </View>
+            </SafeAreaView>
 
             <ScrollView className="p-4">
                 <View className="flex-row flex-wrap justify-between">
@@ -41,8 +45,6 @@ export default function GuidesScreen() {
                     })}
                 </View>
             </ScrollView>
-
-            {/* Use SafeAreaView edges to only cover top, letting bottom be handled by TabBar or natural scroll */}
-        </SafeAreaView>
+        </View>
     );
 }

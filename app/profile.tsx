@@ -1,16 +1,38 @@
-import { View, Text, TouchableOpacity, Image } from 'react-native';
-import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'expo-router';
+import { Briefcase, Calendar, Database, LogOut, Mail } from 'lucide-react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LogOut, User as UserIcon, Mail } from 'lucide-react-native';
+import { useAuth } from '../context/AuthContext';
+import { seedBusinesses } from '../utils/seedBusinesses';
 
 export default function ProfileScreen() {
     const { user, signOut } = useAuth();
     const router = useRouter();
+    const [seeding, setSeeding] = useState(false);
 
     const handleSignOut = async () => {
         await signOut();
         router.replace('/login');
+    };
+
+    const handleSeed = () => {
+        Alert.alert(
+            "Developer Tools",
+            "Seed Database with dummy businesses?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Yes, Seed",
+                    onPress: async () => {
+                        setSeeding(true);
+                        await seedBusinesses();
+                        setSeeding(false);
+                        Alert.alert("Success", "Seeding complete!");
+                    }
+                }
+            ]
+        );
     };
 
     return (
@@ -42,6 +64,52 @@ export default function ProfileScreen() {
                 >
                     <LogOut size={20} color="#ef4444" />
                     <Text className="text-red-500 font-bold">Sign Out</Text>
+                </TouchableOpacity>
+            </View>
+
+            {/* Partner Hub */}
+            <View className="bg-white rounded-2xl p-4 shadow-sm mt-4">
+                <Text className="text-xs text-slate-400 font-bold uppercase mb-2 px-2">Partner Center</Text>
+
+                <TouchableOpacity
+                    onPress={() => router.push('/directory/request')}
+                    className="flex-row items-center gap-3 p-2 border-b border-slate-50 pb-3"
+                >
+                    <View className="w-8 h-8 rounded-full bg-indigo-50 items-center justify-center">
+                        <Briefcase size={16} color="#4f46e5" />
+                    </View>
+                    <View>
+                        <Text className="text-slate-900 font-bold">List Your Business</Text>
+                        <Text className="text-xs text-slate-400">Join the directory</Text>
+                    </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    onPress={() => router.push('/events/request')}
+                    className="flex-row items-center gap-3 p-2 pt-3"
+                >
+                    <View className="w-8 h-8 rounded-full bg-orange-50 items-center justify-center">
+                        <Calendar size={16} color="#f97316" />
+                    </View>
+                    <View>
+                        <Text className="text-slate-900 font-bold">Host an Event</Text>
+                        <Text className="text-xs text-slate-400">Submit an event request</Text>
+                    </View>
+                </TouchableOpacity>
+            </View>
+
+            {/* Developer Tools */}
+            <View className="bg-white rounded-2xl p-4 shadow-sm mt-4">
+                <Text className="text-xs text-slate-400 font-bold uppercase mb-2 px-2">Developer Tools</Text>
+                <TouchableOpacity
+                    onPress={handleSeed}
+                    className="flex-row items-center gap-3 p-2"
+                >
+                    {seeding ? <ActivityIndicator size="small" color="#6366f1" /> : <Database size={20} color="#6366f1" />}
+                    <View>
+                        <Text className="text-indigo-600 font-bold">Seed Database</Text>
+                        <Text className="text-xs text-slate-400">Generate 200 dummy listings</Text>
+                    </View>
                 </TouchableOpacity>
             </View>
 

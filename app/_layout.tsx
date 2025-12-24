@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StreamChat } from 'stream-chat';
 import { Chat, OverlayProvider } from 'stream-chat-expo';
 import { AuthProvider } from '../context/AuthContext';
+import { DirectoryProvider } from '../context/DirectoryContext';
 import { MarketProvider } from '../context/MarketContext';
 import "../global.css";
 import { useProtectedRoute } from '../hooks/useProtectedRoute';
@@ -26,6 +27,9 @@ function RootNavigator() {
             <Stack.Screen name="market/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="market/add" options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="market/filters" options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="directory/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="directory/add" options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="directory/filters" options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="+not-found" />
         </Stack>
     );
@@ -55,9 +59,11 @@ export default function RootLayout() {
                 <Chat client={client}>
                     <AuthProvider>
                         <MarketProvider>
-                            <SafeAreaProvider>
-                                <RootNavigator />
-                            </SafeAreaProvider>
+                            <DirectoryProvider>
+                                <SafeAreaProvider>
+                                    <RootNavigator />
+                                </SafeAreaProvider>
+                            </DirectoryProvider>
                         </MarketProvider>
                     </AuthProvider>
                 </Chat>

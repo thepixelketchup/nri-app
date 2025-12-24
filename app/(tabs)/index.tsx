@@ -61,7 +61,7 @@ export default function HomeScreen() {
             <View>
                 <Text className="text-xs font-bold text-slate-500 uppercase mb-3">Quick Actions</Text>
                 <View className="flex-row gap-3">
-                    <TouchableOpacity onPress={() => router.push('/(tabs)/guides')} className="flex-1 h-28 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-3 justify-between shadow-sm">
+                    <TouchableOpacity onPress={() => router.push('/guides')} className="flex-1 h-28 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-3 justify-between shadow-sm">
                         <Flag color="white" size={24} />
                         <Text className="text-white font-bold text-sm">Survival Kit</Text>
                     </TouchableOpacity>

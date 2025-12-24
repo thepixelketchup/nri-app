@@ -142,5 +142,53 @@ export const STRINGS = {
             INDEX_REQUIRED: 'Database setup required. Please check console for the index creation link.',
             GENERIC: 'Something went wrong while loading listings.',
         }
+    },
+    STORES: {
+        HEADER_TITLE: 'Directory',
+        HEADER_SUBTITLE: 'Find Indian businesses & services',
+        SEARCH_PLACEHOLDER: 'Search for stores, services...',
+        NO_ITEMS: 'No businesses found',
+        LOADING_ERROR: 'Failed to load directory',
+        CATEGORIES: {
+            ALL: 'All',
+            GROCERY: 'Groceries',
+            RESTAURANT: 'Food & Dining',
+            TIFFIN: 'Tiffin Services',
+            SERVICES: 'Services', // Plumber, Electrician
+            BEAUTY: 'Beauty & Wellness',
+            EDUCATION: 'Education',
+            RELIGIOUS: 'Religious',
+            OTHER: 'Other'
+        },
+        ADD_BTN: 'List Your Business',
+        ADD: {
+            TITLE: 'Add Business',
+            SUBTITLE: 'List your service for the community',
+            FORM: {
+                NAME_LABEL: 'Business Name',
+                NAME_PLACEHOLDER: "e.g. Sharma's Grocery",
+                CATEGORY_LABEL: 'Category',
+                PHONE_LABEL: 'Phone / WhatsApp',
+                PHONE_PLACEHOLDER: '+31...',
+                ADDRESS_LABEL: 'Address / Area',
+                ADDRESS_PLACEHOLDER: 'e.g. Amstelveen',
+                DESC_LABEL: 'Description',
+                DESC_PLACEHOLDER: 'Describe your services...',
+                SUBMIT_BTN: 'Create Listing',
+                SUBMITTING: 'Creating...',
+            },
+            SUCCESS: {
+                TITLE: 'Business Listed',
+                MSG: 'Your business has been added to the directory!',
+            }
+        },
+        DETAILS: {
+            CONTACT: 'Contact',
+            CALL: 'Call',
+            WHATSAPP: 'WhatsApp',
+            DIRECTIONS: 'Directions',
+            ABOUT: 'About',
+            REVIEWS: 'Reviews',
+        }
     }
 };
