@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { seedBusinesses } from '../utils/seedBusinesses';
+import { seedCommunities } from '../utils/seedCommunities';
 
 export default function ProfileScreen() {
     const { user, signOut } = useAuth();
@@ -19,16 +20,25 @@ export default function ProfileScreen() {
     const handleSeed = () => {
         Alert.alert(
             "Developer Tools",
-            "Seed Database with dummy businesses?",
+            "Choose a database to seed:",
             [
                 { text: "Cancel", style: "cancel" },
                 {
-                    text: "Yes, Seed",
+                    text: "Seed Businesses",
                     onPress: async () => {
                         setSeeding(true);
                         await seedBusinesses();
                         setSeeding(false);
-                        Alert.alert("Success", "Seeding complete!");
+                        Alert.alert("Success", "Businesses seeded!");
+                    }
+                },
+                {
+                    text: "Seed Communities",
+                    onPress: async () => {
+                        setSeeding(true);
+                        await seedCommunities();
+                        setSeeding(false);
+                        Alert.alert("Success", "Communities seeded!");
                     }
                 }
             ]
@@ -108,7 +118,7 @@ export default function ProfileScreen() {
                     {seeding ? <ActivityIndicator size="small" color="#6366f1" /> : <Database size={20} color="#6366f1" />}
                     <View>
                         <Text className="text-indigo-600 font-bold">Seed Database</Text>
-                        <Text className="text-xs text-slate-400">Generate 200 dummy listings</Text>
+                        <Text className="text-xs text-slate-400">Manage dummy data</Text>
                     </View>
                 </TouchableOpacity>
             </View>

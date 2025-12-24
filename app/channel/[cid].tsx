@@ -7,7 +7,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Channel, MessageInput, MessageList, useChatContext } from 'stream-chat-expo';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../utils/firebaseConfig';
-import { GROUPS } from '../../utils/groups';
 
 export default function ChannelScreen() {
     const { cid } = useLocalSearchParams<{ cid: string }>();
@@ -16,6 +15,7 @@ export default function ChannelScreen() {
     const [channel, setChannel] = useState<any>(null);
     const [showGroupInfo, setShowGroupInfo] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
+    const [icon, setIcon] = useState<string | null>(null);
     const router = useRouter();
 
     useEffect(() => {
@@ -29,6 +29,16 @@ export default function ChannelScreen() {
         };
         if (cid) fetchChannel();
     }, [cid, client?.userID]);
+
+    // Effect to resolve channel icon from channel data only
+    useEffect(() => {
+        if (!channel) return;
+
+        // Check channel data for emoji icon
+        if (channel.data?.image && !channel.data.image.startsWith('http')) {
+            setIcon(channel.data.image);
+        }
+    }, [channel]);
 
     const handleToggleMute = async () => {
         if (!channel) return;
@@ -62,10 +72,17 @@ export default function ChannelScreen() {
                             const channelId = cid ? cid.split(':')[1] : null;
 
                             if (channelId) {
-                                // 1. Remove from Stream
+                                // 1. Send System Message
+                                await channel.sendMessage({
+                                    text: `${user?.displayName || user?.email?.split('@')[0] || 'Someone'} left the group`,
+                                    type: 'system',
+                                    silent: true
+                                });
+
+                                // 2. Remove from Stream
                                 await channel.removeMembers([client.userID]);
 
-                                // 2. Remove from Firestore if it's a community
+                                // 3. Remove from Firestore if it's a community
                                 // Check if it's a community by category OR ID convention
                                 const isCommunity = channel.data?.category === 'community' ||
                                     channelId.startsWith('national_') ||
@@ -96,24 +113,10 @@ export default function ChannelScreen() {
 
     const members = Object.values(channel.state.members);
     const memberCount = channel.data?.member_count || members.length;
+
     const channelName = channel.data?.name || 'Chat';
-    const channelImage = channel.data?.image;
-
-    // Helper to get channel icon from GROUPS constant
-    const getChannelIcon = () => {
-        const channelId = cid ? cid.split(':')[1] : '';
-        // Check national groups
-        const nationalGroup = GROUPS.national.find(g => `national_${g.id}` === channelId);
-        if (nationalGroup) return nationalGroup.icon;
-
-        // Check hub groups
-        const hubGroup = GROUPS.hubs.find(g => `hub_${g.id}` === channelId);
-        if (hubGroup) return hubGroup.icon;
-
-        return null;
-    };
-
-    const channelIcon = getChannelIcon();
+    // Only use channelImage if it is a URL
+    const channelImage = channel.data?.image?.startsWith('http') ? channel.data.image : null;
 
     const renderMember = ({ item }: { item: any }) => {
         const memberUser = item.user;
@@ -157,8 +160,8 @@ export default function ChannelScreen() {
                         <View className="w-8 h-8 bg-indigo-50 rounded-full items-center justify-center overflow-hidden border border-indigo-100">
                             {channelImage ? (
                                 <Image source={{ uri: channelImage }} className="w-full h-full" />
-                            ) : channelIcon ? (
-                                <Text className="text-base">{channelIcon}</Text>
+                            ) : icon ? (
+                                <Text className="text-base">{icon}</Text>
                             ) : (
                                 <Text className="text-indigo-600 font-bold text-xs">{channelName[0]?.toUpperCase()}</Text>
                             )}
@@ -174,7 +177,18 @@ export default function ChannelScreen() {
             </View>
 
             <View className="flex-1">
-                <Channel channel={channel}>
+                <Channel
+                    channel={channel}
+                    MessageSystem={({ message }: { message: any }) => (
+                        <View className="py-2 items-center">
+                            <View className="bg-slate-100 px-3 py-1 rounded-full">
+                                <Text className="text-xs font-bold text-slate-500 text-center uppercase tracking-wide">
+                                    {message.text}
+                                </Text>
+                            </View>
+                        </View>
+                    )}
+                >
                     <MessageList />
                     <MessageInput />
                 </Channel>
@@ -206,8 +220,8 @@ export default function ChannelScreen() {
                             <View className="w-24 h-24 bg-indigo-50 rounded-full items-center justify-center overflow-hidden border-2 border-indigo-100 mb-4 shadow-sm">
                                 {channelImage ? (
                                     <Image source={{ uri: channelImage }} className="w-full h-full" />
-                                ) : channelIcon ? (
-                                    <Text className="text-5xl">{channelIcon}</Text>
+                                ) : icon ? (
+                                    <Text className="text-5xl">{icon}</Text>
                                 ) : (
                                     <Text className="text-4xl text-indigo-600 font-black">{channelName[0]?.toUpperCase()}</Text>
                                 )}
@@ -266,7 +280,7 @@ export default function ChannelScreen() {
                                 <View className="w-8 h-8 rounded-full items-center justify-center bg-red-50">
                                     <LogOut size={18} color="#ef4444" />
                                 </View>
-                                <Text className="font-bold text-red-600 text-base">Exit Group</Text>
+                                <Text className="font-bold text-red-600 text-base">Leave Group</Text>
                             </TouchableOpacity>
                         </View>
 

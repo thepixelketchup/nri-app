@@ -64,13 +64,32 @@ export default function MessagesScreen() {
         });
     };
 
+    const formatTime = (dateString: string | Date | undefined) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        const now = new Date();
+        const isToday = now.toDateString() === date.toDateString();
+
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        const isYesterday = yesterday.toDateString() === date.toDateString();
+
+        if (isToday) {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else if (isYesterday) {
+            return 'Yesterday';
+        } else {
+            return date.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: '2-digit' });
+        }
+    };
+
     // Custom Channel Preview Implementation
     const renderChannelPreview = ({ channel }: any) => {
         const lastMessage = channel.state.messages[channel.state.messages.length - 1];
         const unreadCount = channel.countUnread();
         const displayTitle = channel.data.name || channel.id || 'Unknown';
         const displayImage = channel.data.image;
-        const date = lastMessage?.created_at ? new Date(lastMessage.created_at) : null;
+        const date = lastMessage?.created_at;
 
         return (
             <TouchableOpacity
@@ -96,7 +115,7 @@ export default function MessagesScreen() {
                         <Text className="font-bold text-slate-900 text-base flex-1 mr-2" numberOfLines={1}>{displayTitle}</Text>
                         {date && (
                             <Text className="text-xs text-slate-400 font-medium">
-                                {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                {formatTime(date)}
                             </Text>
                         )}
                     </View>
