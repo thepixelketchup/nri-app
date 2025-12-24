@@ -5,22 +5,27 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StreamChat } from 'stream-chat';
 import { Chat, OverlayProvider } from 'stream-chat-expo';
 import { AuthProvider } from '../context/AuthContext';
+import { MarketProvider } from '../context/MarketContext';
 import "../global.css";
 import { useProtectedRoute } from '../hooks/useProtectedRoute';
 import "../polyfills";
 import { streamConfig } from '../utils/streamConfig';
 
-// Separate component to check authentication *inside* the Provider
 function RootNavigator() {
     useProtectedRoute();
 
     return (
         <Stack>
+            <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen name="login" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="add-post" options={{ presentation: 'modal', headerShown: false }} />
             <Stack.Screen name="add-guide-post" options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="guides/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="events/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="market/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="market/add" options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="market/filters" options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="+not-found" />
         </Stack>
     );
@@ -49,9 +54,11 @@ export default function RootLayout() {
             <OverlayProvider>
                 <Chat client={client}>
                     <AuthProvider>
-                        <SafeAreaProvider>
-                            <RootNavigator />
-                        </SafeAreaProvider>
+                        <MarketProvider>
+                            <SafeAreaProvider>
+                                <RootNavigator />
+                            </SafeAreaProvider>
+                        </MarketProvider>
                     </AuthProvider>
                 </Chat>
             </OverlayProvider>

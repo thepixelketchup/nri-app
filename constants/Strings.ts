@@ -80,5 +80,67 @@ export const STRINGS = {
                 MISSING_FIELDS: 'Please fill in all required fields.',
             }
         }
+    },
+    MARKETPLACE: {
+        HEADER_TITLE: 'Marketplace',
+        HEADER_SUBTITLE: 'Buy, sell, or rent within the community',
+        FILTER_ALL: 'All',
+        FILTER_HOUSING: 'Housing',
+        FILTER_CLASSIFIEDS: 'Classifieds',
+        NO_ITEMS: 'No items found matching your filter',
+        LOADING_ERROR: 'Failed to load marketplace items',
+        OFFERED_LABEL: 'Offered',
+        WANTED_LABEL: 'Wanted',
+        DETAILS: {
+            ABOUT: 'About this item',
+            LOCATION: 'Location',
+            PRICE: 'Price',
+            SELLER: 'Seller',
+            CONTACT: 'Contact Seller',
+            HOUSING: 'Housing',
+            CLASSIFIED: 'Classified',
+            NOT_FOUND: 'Listing not found',
+            SHARE_MESSAGE: (title: string, price: number, location: string) =>
+                `Check out this listing on NRI App!\n\n${title}\nPrice: €${price}\nLocation: ${location}`,
+        },
+        ADD: {
+            TITLE: 'Create Listing',
+            SUBTITLE: 'List an item or housing for the community',
+            FORM: {
+                TITLE_LABEL: 'Title',
+                TITLE_PLACEHOLDER: 'e.g. Spacious Room in Amstelveen',
+                CATEGORY_LABEL: 'Category',
+                TYPE_LABEL: 'Listing Type',
+                PRICE_LABEL: 'Price (€)',
+                PRICE_PLACEHOLDER: '0 for free',
+                LOCATION_LABEL: 'Location',
+                LOCATION_PLACEHOLDER: 'e.g. Amsterdam Zuid',
+                DESC_LABEL: 'Description',
+                DESC_PLACEHOLDER: 'Provide details about what you are listing...',
+                SUBMIT_BTN: 'Post Listing',
+                SUBMITTING: 'Posting...',
+            },
+            SUCCESS: {
+                TITLE: 'Listing Posted',
+                MSG: 'Your listing is now live in the community marketplace!',
+            }
+        },
+        FILTERS: {
+            TITLE: 'Filter Listings',
+            APPLY_BTN: 'Apply Filters',
+            RESET_BTN: 'Reset',
+            SECTION_CATEGORY: 'Category',
+            SECTION_TYPE: 'Type',
+            SECTION_LOCATION: 'Location',
+            LOCATION_PLACEHOLDER: 'Search by city or area...',
+        },
+        SEARCH: {
+            PLACEHOLDER: 'Search marketplace...',
+            NOTE: 'Note: Full-text search is changing to Title-only for performance.',
+        },
+        ERRORS: {
+            INDEX_REQUIRED: 'Database setup required. Please check console for the index creation link.',
+            GENERIC: 'Something went wrong while loading listings.',
+        }
     }
 };
