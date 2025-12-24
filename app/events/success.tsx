@@ -122,10 +122,10 @@ export default function EventSuccessScreen() {
                 name: title,
                 image: imageUrl,
                 members: [user.uid],
-                type: 'event_chat'
+                category: 'event'
             } as any);
             await channel.watch();
-            router.push('/(tabs)/messages');
+            router.push(`/channel/${channel.cid}`);
         } catch (e) {
             console.error(e);
         }

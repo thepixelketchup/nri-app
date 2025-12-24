@@ -1,9 +1,8 @@
-import { Channel, MessageList, MessageInput } from 'stream-chat-expo';
 import { useLocalSearchParams } from 'expo-router';
-import { View, Text } from 'react-native';
-import { useChatContext } from 'stream-chat-expo';
 import { useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Channel, MessageInput, MessageList, useChatContext } from 'stream-chat-expo';
 
 export default function ChannelScreen() {
     const { cid } = useLocalSearchParams<{ cid: string }>();
@@ -12,12 +11,14 @@ export default function ChannelScreen() {
 
     useEffect(() => {
         const fetchChannel = async () => {
+            if (!client || !client.userID) return; // Wait for connection
+
             const c = client.channel('messaging', cid.split(':')[1]);
             await c.watch();
             setChannel(c);
         };
         if (cid) fetchChannel();
-    }, [cid]);
+    }, [cid, client?.userID]);
 
     if (!channel) return <View className="flex-1 bg-white" />;
 

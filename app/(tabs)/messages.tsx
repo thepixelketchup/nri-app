@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChannelList } from 'stream-chat-expo';
+import { ChannelList, useChatContext } from 'stream-chat-expo';
 import { useAuth } from '../../context/AuthContext';
 
 // Community IDs are used to identify community channels
@@ -13,15 +13,15 @@ const communityIds = [
     'hub_eind_gen', 'hub_eind_carpool'
 ];
 
-
 export default function MessagesScreen() {
     const router = useRouter();
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState<'communities' | 'events' | 'marketplace' | 'business'>('communities');
+    const { client } = useChatContext();
 
-    if (!user) {
+    if (!user || !client || !client.userID) {
         return (
-            <SafeAreaView className="flex-1 justify-center items-center bg-slate-50 border-t border-slate-200">
+            <SafeAreaView className="flex-1 justify-center items-center bg-white border-t border-slate-200">
                 <Text className="text-slate-500 font-medium">Please sign in to view messages</Text>
             </SafeAreaView>
         );
@@ -29,8 +29,8 @@ export default function MessagesScreen() {
 
     // Single consistent query to fetch all user channels
     const filters = useMemo(() => ({
-        members: { $in: [user.uid] }
-    }), [user.uid]);
+        members: { $in: [client.userID] }
+    }), [client.userID]);
 
     const sort = { last_message_at: -1 } as const;
 
@@ -124,7 +124,7 @@ export default function MessagesScreen() {
                             onPress={() => router.push('/communities')}
                             className="bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-full flex-row items-center gap-1 mt-1"
                         >
-                            <Text className="text-indigo-600 font-bold text-xs">Find Groups +</Text>
+                            <Text className="text-indigo-600 font-bold text-xs">Discover Communities</Text>
                         </TouchableOpacity>
                     ) : (
                         <View className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200 mt-1">

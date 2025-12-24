@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { arrayRemove, arrayUnion, doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { Check, ChevronLeft, Globe, Map } from 'lucide-react-native';
+import { Globe, Map, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,11 +21,14 @@ const GROUPS = {
     ]
 };
 
+const CITIES = ['All', 'Amstelveen', 'Amsterdam', 'Eindhoven', 'Rotterdam', 'Utrecht'];
+
 export default function CommunitiesScreen() {
     const router = useRouter();
     const { client } = useChatContext();
     const { user } = useAuth();
     const [userData, setUserData] = useState<any>({ joinedGroups: [] });
+    const [selectedCity, setSelectedCity] = useState('All');
 
     // Fetch User Profile for Joined Groups
     useEffect(() => {
@@ -74,43 +77,60 @@ export default function CommunitiesScreen() {
         }
     };
 
-    return (
-        <View className="flex-1 bg-slate-50">
-            {/* Header with Back Button */}
-            <SafeAreaView edges={['top']} className="bg-white">
-                <View className="px-4 py-3 border-b border-slate-100 flex-row items-center gap-3">
-                    <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 rounded-full bg-slate-50 items-center justify-center">
-                        <ChevronLeft size={24} color="#0f172a" />
-                    </TouchableOpacity>
-                    <Text className="text-xl font-bold text-slate-900">Join Communities</Text>
-                </View>
-            </SafeAreaView>
+    const filteredHubs = selectedCity === 'All'
+        ? GROUPS.hubs
+        : GROUPS.hubs.filter(h => h.city === selectedCity);
 
-            <ScrollView className="p-4">
-                {/* National */}
-                <View className="mb-6">
-                    <View className="flex-row items-center gap-2 mb-3">
-                        <Globe size={16} color="#4f46e5" />
-                        <Text className="text-xs font-bold text-slate-500 uppercase">National Channels</Text>
+    return (
+        <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+            {/* Header */}
+            {/* Header */}
+            <View className="px-6 pt-6 pb-2 bg-white flex-row items-start justify-between">
+                <View>
+                    <Text className="text-4xl font-extrabold text-slate-900 tracking-tighter">Communities</Text>
+                    <Text className="text-slate-500 font-medium text-base mt-1">Connect with your tribe</Text>
+                </View>
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    className="mt-1 w-8 h-8 rounded-full bg-slate-100 items-center justify-center"
+                >
+                    <X size={20} color="#64748b" />
+                </TouchableOpacity>
+            </View>
+
+            <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
+                {/* National Section */}
+                <View className="mt-6 px-6">
+                    <View className="flex-row items-center gap-2 mb-4">
+                        <View className="w-8 h-8 rounded-full bg-indigo-50 items-center justify-center border border-indigo-100">
+                            <Globe size={16} color="#4f46e5" />
+                        </View>
+                        <Text className="text-lg font-bold text-slate-900">National Groups</Text>
                     </View>
-                    <View className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+
+                    <View className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                         {GROUPS.national.map((g, i) => {
                             const isJoined = userData.joinedGroups?.includes(`national_${g.id}`);
                             return (
-                                <TouchableOpacity key={g.id} onPress={() => handleJoin(g, 'national')} className={`p-4 flex-row items-center gap-3 ${i !== 0 ? 'border-t border-slate-100' : ''}`}>
-                                    <Text className="text-2xl">{g.icon}</Text>
+                                <TouchableOpacity
+                                    key={g.id}
+                                    onPress={() => handleJoin(g, 'national')}
+                                    className={`p-4 flex-row items-center gap-4 ${i !== 0 ? 'border-t border-slate-50' : ''}`}
+                                >
+                                    <View className="w-10 h-10 bg-slate-50 rounded-full items-center justify-center text-xl">
+                                        <Text className="text-xl">{g.icon}</Text>
+                                    </View>
                                     <View className="flex-1">
-                                        <Text className="font-bold text-slate-900 text-sm">{g.name}</Text>
-                                        <Text className="text-xs text-slate-500">{g.desc}</Text>
+                                        <Text className="font-bold text-slate-900 text-base">{g.name}</Text>
+                                        <Text className="text-sm text-slate-500">{g.desc}</Text>
                                     </View>
                                     {isJoined ? (
-                                        <View className="bg-green-100 px-3 py-1 rounded-full flex-row items-center gap-1">
-                                            <Check size={12} color="#15803d" />
-                                            <Text className="text-xs font-bold text-green-700">Joined</Text>
+                                        <View className="bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
+                                            <Text className="text-xs font-bold text-emerald-700">Joined</Text>
                                         </View>
                                     ) : (
-                                        <View className="bg-slate-100 px-3 py-1 rounded-full">
-                                            <Text className="text-xs font-bold text-slate-600">Join</Text>
+                                        <View className="bg-slate-900 px-4 py-1.5 rounded-full">
+                                            <Text className="text-xs font-bold text-white">Join</Text>
                                         </View>
                                     )}
                                 </TouchableOpacity>
@@ -119,38 +139,75 @@ export default function CommunitiesScreen() {
                     </View>
                 </View>
 
-                {/* Hubs */}
-                <View className="mb-6">
-                    <View className="flex-row items-center gap-2 mb-3">
-                        <Map size={16} color="#4f46e5" />
-                        <Text className="text-xs font-bold text-slate-500 uppercase">Local Hubs</Text>
+                {/* Local Hubs Section */}
+                <View className="mt-8">
+                    <View className="px-6 flex-row items-center gap-2 mb-4">
+                        <View className="w-8 h-8 rounded-full bg-indigo-50 items-center justify-center border border-indigo-100">
+                            <Map size={16} color="#4f46e5" />
+                        </View>
+                        <Text className="text-lg font-bold text-slate-900">Local Hubs</Text>
                     </View>
-                    <View className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-                        {GROUPS.hubs.map((g, i) => {
-                            const isJoined = userData.joinedGroups?.includes(`hub_${g.id}`);
-                            return (
-                                <TouchableOpacity key={g.id} onPress={() => handleJoin(g, 'hub')} className={`p-4 flex-row items-center gap-3 ${i !== 0 ? 'border-t border-slate-100' : ''}`}>
-                                    <Text className="text-2xl">{g.icon}</Text>
-                                    <View className="flex-1">
-                                        <Text className="font-bold text-slate-900 text-sm">{g.name}</Text>
-                                        <Text className="text-xs text-slate-500">{g.city} • {g.desc}</Text>
-                                    </View>
-                                    {isJoined ? (
-                                        <View className="bg-green-100 px-3 py-1 rounded-full flex-row items-center gap-1">
-                                            <Check size={12} color="#15803d" />
-                                            <Text className="text-xs font-bold text-green-700">Joined</Text>
-                                        </View>
-                                    ) : (
-                                        <View className="bg-slate-100 px-3 py-1 rounded-full">
-                                            <Text className="text-xs font-bold text-slate-600">Join</Text>
-                                        </View>
-                                    )}
-                                </TouchableOpacity>
-                            )
-                        })}
+
+                    {/* City Filters */}
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        className="mb-4"
+                        contentContainerStyle={{ paddingHorizontal: 24, gap: 8 }}
+                    >
+                        {CITIES.map((city) => (
+                            <TouchableOpacity
+                                key={city}
+                                onPress={() => setSelectedCity(city)}
+                                className={`px-4 py-2 rounded-full border ${selectedCity === city ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-slate-200'}`}
+                            >
+                                <Text className={`font-bold text-xs ${selectedCity === city ? 'text-white' : 'text-slate-600'}`}>
+                                    {city}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+
+                    <View className="px-6">
+                        <View className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                            {filteredHubs.length > 0 ? (
+                                filteredHubs.map((g, i) => {
+                                    const isJoined = userData.joinedGroups?.includes(`hub_${g.id}`);
+                                    return (
+                                        <TouchableOpacity
+                                            key={g.id}
+                                            onPress={() => handleJoin(g, 'hub')}
+                                            className={`p-4 flex-row items-center gap-4 ${i !== 0 ? 'border-t border-slate-50' : ''}`}
+                                        >
+                                            <View className="w-10 h-10 bg-slate-50 rounded-full items-center justify-center">
+                                                <Text className="text-xl">{g.icon}</Text>
+                                            </View>
+                                            <View className="flex-1">
+                                                <Text className="font-bold text-slate-900 text-base">{g.name}</Text>
+                                                <Text className="text-sm text-slate-500">{g.city} • {g.desc}</Text>
+                                            </View>
+                                            {isJoined ? (
+                                                <View className="bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
+                                                    <Text className="text-xs font-bold text-emerald-700">Joined</Text>
+                                                </View>
+                                            ) : (
+                                                <View className="bg-slate-900 px-4 py-1.5 rounded-full">
+                                                    <Text className="text-xs font-bold text-white">Join</Text>
+                                                </View>
+                                            )}
+                                        </TouchableOpacity>
+                                    )
+                                })
+                            ) : (
+                                <View className="p-8 items-center justify-center">
+                                    <Text className="text-slate-400 font-medium">No hubs found in {selectedCity}</Text>
+                                </View>
+                            )}
+                        </View>
                     </View>
                 </View>
+
             </ScrollView>
-        </View>
+        </SafeAreaView>
     );
 }
