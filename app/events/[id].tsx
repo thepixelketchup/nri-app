@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { arrayRemove, arrayUnion, doc, getDoc, updateDoc } from 'firebase/firestore';
-import { Calendar, Crown, Heart, MapPin, Share2, Users } from 'lucide-react-native';
+import { arrayRemove, arrayUnion, doc, getDoc, increment, setDoc, updateDoc } from 'firebase/firestore';
+import { Calendar, Crown, Eye, Heart, MapPin, Share2, Users } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,7 +22,31 @@ export default function EventDetailScreen() {
     useEffect(() => {
         if (!id) return;
         fetchEvent();
+        trackView();
     }, [id]);
+
+    const trackView = async () => {
+        if (!user || !id) return;
+        try {
+            // Check if user already viewed
+            const viewRef = doc(db, 'public', 'data', 'events', String(id), 'views', user.uid);
+            const viewSnap = await getDoc(viewRef);
+
+            if (!viewSnap.exists()) {
+                // First view: Record it and increment counter
+                await setDoc(viewRef, {
+                    userId: user.uid,
+                    timestamp: new Date()
+                });
+                const eventRef = doc(db, 'public', 'data', 'events', String(id));
+                await updateDoc(eventRef, {
+                    viewCount: increment(1)
+                });
+            }
+        } catch (e) {
+            console.error("Event view track error", e);
+        }
+    };
 
     const handleShare = async () => {
         if (!event) return;
@@ -257,29 +281,37 @@ export default function EventDetailScreen() {
                             </View>
                         </View>
 
-                        {/* Attendees */}
-                        <View className="flex-row items-center gap-4">
-                            <View className="w-10 h-10 bg-indigo-50 rounded-full items-center justify-center">
-                                <Users size={20} color="#4f46e5" />
+                        {/* Stats Row Redesign */}
+                        <View className="flex-row gap-3 w-full mt-2">
+                            {/* Going */}
+                            <View className="flex-1 bg-indigo-50 rounded-2xl p-3 items-center justify-center">
+                                <View className="flex-row items-center gap-1.5 mb-1">
+                                    <Users size={16} color="#4f46e5" />
+                                    <Text className="text-indigo-700 font-bold text-lg">{event.attendeeIds?.length || 0}</Text>
+                                </View>
+                                <Text className="text-indigo-600/80 text-xs font-bold uppercase tracking-tight">Going</Text>
                             </View>
-                            <View>
-                                <Text className="text-slate-900 font-bold text-base">{event.attendeeIds?.length || 0} {STRINGS.EVENTS.DETAILS.GOING}</Text>
-                                <Text className="text-slate-500 text-sm">{STRINGS.EVENTS.DETAILS.ATTENDEES_SUBTITLE}</Text>
+
+                            {/* Interested */}
+                            <View className="flex-1 bg-pink-50 rounded-2xl p-3 items-center justify-center">
+                                <View className="flex-row items-center gap-1.5 mb-1">
+                                    <Heart size={16} color="#db2777" />
+                                    <Text className="text-pink-700 font-bold text-lg">{event.interestedIds?.length || 0}</Text>
+                                </View>
+                                <Text className="text-pink-600/80 text-xs font-bold uppercase tracking-tight">Interested</Text>
+                            </View>
+
+                            {/* Views */}
+                            <View className="flex-1 bg-blue-50 rounded-2xl p-3 items-center justify-center">
+                                <View className="flex-row items-center gap-1.5 mb-1">
+                                    <Eye size={16} color="#2563eb" />
+                                    <Text className="text-blue-700 font-bold text-lg">{event.viewCount || 0}</Text>
+                                </View>
+                                <Text className="text-blue-600/80 text-xs font-bold uppercase tracking-tight">
+                                    {(event.viewCount === 1 || !event.viewCount) ? 'View' : 'Views'}
+                                </Text>
                             </View>
                         </View>
-
-                        {/* Interested */}
-                        {event.interestedIds?.length > 0 && (
-                            <View className="flex-row items-center gap-4">
-                                <View className="w-10 h-10 bg-indigo-50 rounded-full items-center justify-center">
-                                    <Heart size={20} color="#4f46e5" />
-                                </View>
-                                <View>
-                                    <Text className="text-slate-900 font-bold text-base">{event.interestedIds.length} {STRINGS.EVENTS.INTERESTED_SUFFIX}</Text>
-                                    <Text className="text-slate-500 text-sm">People who like this event</Text>
-                                </View>
-                            </View>
-                        )}
                     </View>
 
                     {/* Description */}

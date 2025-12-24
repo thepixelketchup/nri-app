@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { arrayRemove, arrayUnion, collection, doc, limit, onSnapshot, orderBy, query, updateDoc } from 'firebase/firestore';
-import { Calendar, Heart, MapPin, Users } from 'lucide-react-native';
+import { Calendar, Eye, Heart, MapPin, Users } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -121,6 +121,12 @@ export default function EventsScreen() {
                                 </Text>
                             </View>
                         )}
+                        <View className="flex-row items-center gap-1.5">
+                            <Eye size={12} color="#64748b" />
+                            <Text className="text-xs text-slate-500 font-medium">
+                                {item.viewCount || 0} {(item.viewCount === 1 || !item.viewCount) ? 'View' : 'Views'}
+                            </Text>
+                        </View>
                     </View>
                 </View>
             </TouchableOpacity>

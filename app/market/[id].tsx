@@ -1,17 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { doc, getDoc } from 'firebase/firestore';
-import { MapPin, Share2, ShoppingBag, Tag, User } from 'lucide-react-native';
+import { doc, getDoc, increment, setDoc, updateDoc } from 'firebase/firestore';
+import { Calendar, Eye, MapPin, MessageCircle, Share2, ShoppingBag, Tag, User } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { STRINGS } from '../../constants/Strings';
+import { useAuth } from '../../context/AuthContext';
 import { db } from '../../utils/firebaseConfig';
 
 export default function MarketDetailScreen() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
+    const { user } = useAuth();
     const { top, bottom } = useSafeAreaInsets();
     const [item, setItem] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -19,7 +21,31 @@ export default function MarketDetailScreen() {
     useEffect(() => {
         if (!id) return;
         fetchItem();
+        trackView();
     }, [id]);
+
+    const trackView = async () => {
+        if (!user || !id) return;
+        try {
+            // Check if user already viewed
+            const viewRef = doc(db, 'public', 'data', 'market', String(id), 'views', user.uid);
+            const viewSnap = await getDoc(viewRef);
+
+            if (!viewSnap.exists()) {
+                // First view: Record it and increment counter
+                await setDoc(viewRef, {
+                    userId: user.uid,
+                    timestamp: new Date()
+                });
+                const itemRef = doc(db, 'public', 'data', 'market', String(id));
+                await updateDoc(itemRef, {
+                    viewCount: increment(1)
+                });
+            }
+        } catch (e) {
+            console.error("View track error", e);
+        }
+    };
 
     const fetchItem = async () => {
         try {
@@ -49,7 +75,30 @@ export default function MarketDetailScreen() {
         }
     };
 
-    const handleContact = () => {
+    const handleContact = async () => {
+        if (!user || !id) return;
+
+        // Track unique contact click
+        try {
+            const contactRef = doc(db, 'public', 'data', 'market', String(id), 'contacts', user.uid);
+            const contactSnap = await getDoc(contactRef); // Check uniquely by user ID
+
+            if (!contactSnap.exists()) {
+                await setDoc(contactRef, {
+                    userId: user.uid,
+                    timestamp: new Date()
+                });
+                const itemRef = doc(db, 'public', 'data', 'market', String(id));
+                await updateDoc(itemRef, {
+                    contactCount: increment(1)
+                });
+                // Optimistically update local state to show +1 immediately
+                setItem((prev: any) => ({ ...prev, contactCount: (prev.contactCount || 0) + 1 }));
+            }
+        } catch (e) {
+            console.error("Contact track error", e);
+        }
+
         Alert.alert(
             STRINGS.MARKETPLACE.DETAILS.CONTACT,
             "Contacting functionality will be available soon!",
@@ -106,23 +155,24 @@ export default function MarketDetailScreen() {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Badge Overlay */}
-                    <View className={`absolute bottom-6 left-5 px-4 py-1.5 rounded-full ${item.type === 'offered' ? 'bg-green-500' : 'bg-orange-500'}`}>
-                        <Text className="text-white font-black uppercase text-xs tracking-widest">
-                            {item.type === 'offered' ? STRINGS.MARKETPLACE.OFFERED_LABEL : STRINGS.MARKETPLACE.WANTED_LABEL}
-                        </Text>
-                    </View>
                 </View>
 
                 {/* Content */}
                 <View className="px-5 -mt-6 bg-white rounded-t-3xl pt-8">
-                    {/* Title & Category */}
-                    <View className="mb-6">
-                        <Text className="text-sm font-bold text-indigo-600 uppercase tracking-widest mb-1">
+                    {/* Header: Category & Badge */}
+                    <View className="flex-row items-center justify-between mb-4">
+                        <Text className="text-sm font-bold text-indigo-600 uppercase tracking-widest">
                             {item.marketType === 'housing' ? STRINGS.MARKETPLACE.DETAILS.HOUSING : STRINGS.MARKETPLACE.DETAILS.CLASSIFIED}
                         </Text>
-                        <Text className="text-3xl font-extrabold text-slate-900 leading-tight">{item.title}</Text>
+                        <View className={`px-3 py-1 rounded-full ${item.type === 'offered' ? 'bg-green-100' : 'bg-orange-100'}`}>
+                            <Text className={`text-[10px] font-bold uppercase tracking-wide ${item.type === 'offered' ? 'text-green-700' : 'text-orange-700'}`}>
+                                {item.type === 'offered' ? STRINGS.MARKETPLACE.OFFERED_LABEL : STRINGS.MARKETPLACE.WANTED_LABEL}
+                            </Text>
+                        </View>
                     </View>
+
+                    {/* Title */}
+                    <Text className="text-3xl font-extrabold text-slate-900 leading-tight mb-6">{item.title}</Text>
 
                     {/* Info Matrix */}
                     <View className="flex-row flex-wrap gap-4 mb-8">
@@ -142,6 +192,32 @@ export default function MarketDetailScreen() {
                                 <Text className="text-slate-500 text-xs font-bold uppercase tracking-tighter">{STRINGS.MARKETPLACE.DETAILS.LOCATION}</Text>
                             </View>
                             <Text className="text-base font-bold text-slate-900" numberOfLines={1}>{item.location}</Text>
+                        </View>
+
+                        {/* Post Date */}
+                        <View className="bg-slate-50 rounded-2xl p-4 w-full border border-slate-100">
+                            <View className="flex-row items-center gap-2 mb-1">
+                                <Calendar size={16} color="#4f46e5" />
+                                <Text className="text-slate-500 text-xs font-bold uppercase tracking-tighter">Posted</Text>
+                            </View>
+                            <Text className="text-base font-bold text-slate-900">
+                                {item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Just now'}
+                            </Text>
+                        </View>
+
+                        <View className="flex-row gap-4 w-full">
+                            <View className="bg-blue-50 rounded-2xl p-3 flex-1 items-center flex-row justify-center gap-2">
+                                <Eye size={16} color="#2563eb" />
+                                <Text className="text-blue-700 font-bold">
+                                    {item.viewCount || 0} {(item.viewCount === 1 || !item.viewCount) ? 'View' : 'Views'}
+                                </Text>
+                            </View>
+                            <View className="bg-purple-50 rounded-2xl p-3 flex-1 items-center flex-row justify-center gap-2">
+                                <MessageCircle size={16} color="#9333ea" />
+                                <Text className="text-purple-700 font-bold">
+                                    {item.contactCount || 0} {(item.contactCount === 1 || !item.contactCount) ? 'Msg' : 'Msgs'}
+                                </Text>
+                            </View>
                         </View>
                     </View>
 

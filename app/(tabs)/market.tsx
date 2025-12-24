@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { collection, getDocs, limit, orderBy, query, startAfter, where } from 'firebase/firestore';
-import { AlertCircle, Filter, MapPin, Search, ShoppingBag, XCircle } from 'lucide-react-native';
+import { AlertCircle, Eye, Filter, MapPin, MessageCircle, Search, ShoppingBag, XCircle } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -162,9 +162,25 @@ export default function MarketScreen() {
                             {item.location}
                         </Text>
                     </View>
+
+                    {/* Stats */}
+                    <View className="flex-row items-center gap-3 mt-2">
+                        <View className="flex-row items-center gap-1">
+                            <Eye size={12} color="#94a3b8" />
+                            <Text className="text-[10px] font-medium text-slate-500">
+                                {item.viewCount || 0} {(item.viewCount === 1 || !item.viewCount) ? 'View' : 'Views'}
+                            </Text>
+                        </View>
+                        <View className="flex-row items-center gap-1">
+                            <MessageCircle size={12} color="#94a3b8" />
+                            <Text className="text-[10px] font-medium text-slate-500">
+                                {item.contactCount || 0} {(item.contactCount === 1 || !item.contactCount) ? 'Msg' : 'Msgs'}
+                            </Text>
+                        </View>
+                    </View>
                 </View>
 
-                <View className="flex-row items-end justify-between">
+                <View className="flex-row items-end justify-between mt-2">
                     <Text className="text-xl font-black text-indigo-600">
                         €{item.price === 0 ? 'Free' : item.price}
                     </Text>
