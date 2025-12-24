@@ -6,6 +6,7 @@ import { Calendar, Eye, MapPin, MessageCircle, Share2, ShoppingBag, Tag, User } 
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useChatContext } from 'stream-chat-expo';
 import { STRINGS } from '../../constants/Strings';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../utils/firebaseConfig';
@@ -75,13 +76,20 @@ export default function MarketDetailScreen() {
         }
     };
 
-    const handleContact = async () => {
-        if (!user || !id) return;
+    const { client } = useChatContext();
 
-        // Track unique contact click
+    const handleContact = async () => {
+        if (!user || !id || !item) return;
+
+        if (user.uid === item.userId) {
+            Alert.alert("Owning Item", "You cannot contact yourself about your own listing.");
+            return;
+        }
+
         try {
+            // Track unique contact click
             const contactRef = doc(db, 'public', 'data', 'market', String(id), 'contacts', user.uid);
-            const contactSnap = await getDoc(contactRef); // Check uniquely by user ID
+            const contactSnap = await getDoc(contactRef);
 
             if (!contactSnap.exists()) {
                 await setDoc(contactRef, {
@@ -92,18 +100,31 @@ export default function MarketDetailScreen() {
                 await updateDoc(itemRef, {
                     contactCount: increment(1)
                 });
-                // Optimistically update local state to show +1 immediately
                 setItem((prev: any) => ({ ...prev, contactCount: (prev.contactCount || 0) + 1 }));
             }
-        } catch (e) {
-            console.error("Contact track error", e);
-        }
 
-        Alert.alert(
-            STRINGS.MARKETPLACE.DETAILS.CONTACT,
-            "Contacting functionality will be available soon!",
-            [{ text: "OK" }]
-        );
+            // Ensure Seller exists in Stream Chat
+            await client.upsertUser({
+                id: item.userId,
+                name: item.sellerName || 'Community Member',
+            });
+
+            // Create/Join Chat Channel
+            const channel = client.channel('messaging', `market_${item.id}_${user.uid}`, {
+                name: item.title,
+                image: item.imageUrl,
+                members: [user.uid, item.userId],
+                category: 'marketplace',
+                marketItemId: item.id
+            } as any);
+
+            await channel.watch();
+            router.push(`/channel/${channel.cid}`);
+
+        } catch (e: any) {
+            console.error("Contact error", e);
+            Alert.alert("Error", "Could not start chat. Please try again.");
+        }
     };
 
     if (loading) {
