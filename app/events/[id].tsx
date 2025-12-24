@@ -6,6 +6,7 @@ import { Calendar, Crown, Eye, Heart, MapPin, Share2, Users } from 'lucide-react
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useChatContext } from 'stream-chat-expo';
 import { STRINGS } from '../../constants/Strings';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../utils/firebaseConfig';
@@ -18,6 +19,7 @@ export default function EventDetailScreen() {
     const [loading, setLoading] = useState(true);
     const [rsvpLoading, setRsvpLoading] = useState(false);
     const { top, bottom } = useSafeAreaInsets();
+    const { client } = useChatContext();
 
     useEffect(() => {
         if (!id) return;
@@ -99,6 +101,25 @@ export default function EventDetailScreen() {
                 : [...(event.attendeeIds || []), user.uid];
 
             setEvent({ ...event, attendeeIds: newAttendees });
+
+            // Stream Chat Channel Membership Logic
+            if (client && user.uid) {
+                const channelId = `event_${id}`;
+                const channel = client.channel('messaging', channelId, {
+                    name: event.title,
+                    image: event.imageUrl,
+                    category: 'event', // Important for filtering
+                    members: [user.uid] // Ensure creator is member if creating
+                });
+
+                if (!isAttending) {
+                    // User is JOINING
+                    await channel.addMembers([user.uid]);
+                } else {
+                    // User is LEAVING
+                    await channel.removeMembers([user.uid]);
+                }
+            }
 
             // If user just joined, navigate to success
             if (!isAttending) {

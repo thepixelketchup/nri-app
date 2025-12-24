@@ -1,25 +1,14 @@
 import { useRouter } from 'expo-router';
-import { arrayRemove, arrayUnion, doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { arrayUnion, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { Globe, Map, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useChatContext } from 'stream-chat-expo';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../utils/firebaseConfig';
 
-const GROUPS = {
-    national: [
-        { id: 'intro', name: 'Introductions', icon: '🎙️', desc: 'Say hello to the community' },
-        { id: 'travel', name: 'Travel to India', icon: '✈️', desc: 'Flight buddies & document carry' },
-        { id: 'cricket', name: 'Cricket Fans', icon: '🏏', desc: 'India vs Pakistan live chat' },
-    ],
-    hubs: [
-        { city: 'Amstelveen', id: 'ams_gen', name: 'Amstelveen Chat', icon: '💬', desc: 'Stadshart updates & local news' },
-        { city: 'Amsterdam', id: 'adam_gen', name: 'Amsterdam Chat', icon: '💬', desc: 'City life & housing tips' },
-        { city: 'Eindhoven', id: 'eind_gen', name: 'Eindhoven Chat', icon: '💬', desc: 'Tech hub discussions' },
-    ]
-};
+import { GROUPS } from '../../utils/groups';
 
 const CITIES = ['All', 'Amstelveen', 'Amsterdam', 'Eindhoven', 'Rotterdam', 'Utrecht'];
 
@@ -27,7 +16,8 @@ export default function CommunitiesScreen() {
     const router = useRouter();
     const { client } = useChatContext();
     const { user } = useAuth();
-    const [userData, setUserData] = useState<any>({ joinedGroups: [] });
+    const [joiningIds, setJoiningIds] = useState<string[]>([]);
+    const [userData, setUserData] = useState<any>(null);
     const [selectedCity, setSelectedCity] = useState('All');
 
     // Fetch User Profile for Joined Groups
@@ -47,33 +37,40 @@ export default function CommunitiesScreen() {
         }
 
         const groupId = type === 'national' ? `national_${group.id}` : `hub_${group.id}`;
-        const isJoined = userData.joinedGroups?.includes(groupId);
+
+        // If already joined, do nothing (button should be disabled/hidden logic)
+        if (userData?.joinedGroups?.includes(groupId)) return;
+
+        setJoiningIds(prev => [...prev, group.id]);
 
         // 1. Update Firestore Profile
         const userRef = doc(db, 'users', user.uid);
         try {
             await setDoc(userRef, {
-                joinedGroups: isJoined ? arrayRemove(groupId) : arrayUnion(groupId)
+                joinedGroups: arrayUnion(groupId)
             }, { merge: true });
         } catch (e) {
             console.error(e);
         }
 
         // 2. Stream Channel Logic
-        if (!isJoined) {
+        try {
             const channelType = 'messaging';
             const channelId = groupId;
 
             const channel = client.channel(channelType, channelId, {
                 name: group.name,
                 members: [user.uid],
+                category: 'community'
             } as any);
 
             await channel.watch();
-            router.push(`/channel/${channel.cid}`);
-        } else {
-            const channelId = groupId;
-            router.push(`/channel/messaging:${channelId}`);
+            await channel.addMembers([user.uid]);
+            // No navigation - just stay on page
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setJoiningIds(prev => prev.filter(id => id !== group.id));
         }
     };
 
@@ -83,7 +80,6 @@ export default function CommunitiesScreen() {
 
     return (
         <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-            {/* Header */}
             {/* Header */}
             <View className="px-6 pt-6 pb-2 bg-white flex-row items-start justify-between">
                 <View>
@@ -110,11 +106,12 @@ export default function CommunitiesScreen() {
 
                     <View className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                         {GROUPS.national.map((g, i) => {
-                            const isJoined = userData.joinedGroups?.includes(`national_${g.id}`);
+                            const isJoined = userData?.joinedGroups?.includes(`national_${g.id}`);
+                            const isJoining = joiningIds.includes(g.id);
+
                             return (
-                                <TouchableOpacity
+                                <View
                                     key={g.id}
-                                    onPress={() => handleJoin(g, 'national')}
                                     className={`p-4 flex-row items-center gap-4 ${i !== 0 ? 'border-t border-slate-50' : ''}`}
                                 >
                                     <View className="w-10 h-10 bg-slate-50 rounded-full items-center justify-center text-xl">
@@ -124,16 +121,32 @@ export default function CommunitiesScreen() {
                                         <Text className="font-bold text-slate-900 text-base">{g.name}</Text>
                                         <Text className="text-sm text-slate-500">{g.desc}</Text>
                                     </View>
-                                    {isJoined ? (
-                                        <View className="bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
-                                            <Text className="text-xs font-bold text-emerald-700">Joined</Text>
-                                        </View>
-                                    ) : (
-                                        <View className="bg-slate-900 px-4 py-1.5 rounded-full">
-                                            <Text className="text-xs font-bold text-white">Join</Text>
-                                        </View>
-                                    )}
-                                </TouchableOpacity>
+
+                                    <View className="w-[85px] items-end justify-center">
+                                        {!userData ? (
+                                            <ActivityIndicator size="small" color="#94a3b8" />
+                                        ) : (
+                                            <TouchableOpacity
+                                                onPress={() => handleJoin(g, 'national')}
+                                                disabled={isJoined || isJoining}
+                                                className={`px-4 py-2 rounded-full ${isJoined
+                                                    ? 'bg-slate-100'
+                                                    : isJoining
+                                                        ? 'bg-indigo-50 border border-indigo-100'
+                                                        : 'bg-indigo-600 shadow-sm shadow-indigo-200'
+                                                    }`}
+                                            >
+                                                {isJoining ? (
+                                                    <ActivityIndicator size="small" color="#4f46e5" />
+                                                ) : (
+                                                    <Text className={`text-xs font-bold ${isJoined ? 'text-slate-500' : 'text-white'}`}>
+                                                        {isJoined ? 'Joined' : 'Join'}
+                                                    </Text>
+                                                )}
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                </View>
                             )
                         })}
                     </View>
@@ -172,11 +185,12 @@ export default function CommunitiesScreen() {
                         <View className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                             {filteredHubs.length > 0 ? (
                                 filteredHubs.map((g, i) => {
-                                    const isJoined = userData.joinedGroups?.includes(`hub_${g.id}`);
+                                    const isJoined = userData?.joinedGroups?.includes(`hub_${g.id}`);
+                                    const isJoining = joiningIds.includes(g.id);
+
                                     return (
-                                        <TouchableOpacity
+                                        <View
                                             key={g.id}
-                                            onPress={() => handleJoin(g, 'hub')}
                                             className={`p-4 flex-row items-center gap-4 ${i !== 0 ? 'border-t border-slate-50' : ''}`}
                                         >
                                             <View className="w-10 h-10 bg-slate-50 rounded-full items-center justify-center">
@@ -186,16 +200,32 @@ export default function CommunitiesScreen() {
                                                 <Text className="font-bold text-slate-900 text-base">{g.name}</Text>
                                                 <Text className="text-sm text-slate-500">{g.city} • {g.desc}</Text>
                                             </View>
-                                            {isJoined ? (
-                                                <View className="bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
-                                                    <Text className="text-xs font-bold text-emerald-700">Joined</Text>
-                                                </View>
-                                            ) : (
-                                                <View className="bg-slate-900 px-4 py-1.5 rounded-full">
-                                                    <Text className="text-xs font-bold text-white">Join</Text>
-                                                </View>
-                                            )}
-                                        </TouchableOpacity>
+
+                                            <View className="w-[85px] items-end justify-center">
+                                                {!userData ? (
+                                                    <ActivityIndicator size="small" color="#94a3b8" />
+                                                ) : (
+                                                    <TouchableOpacity
+                                                        onPress={() => handleJoin(g, 'hub')}
+                                                        disabled={isJoined || isJoining}
+                                                        className={`px-4 py-2 rounded-full ${isJoined
+                                                            ? 'bg-slate-100'
+                                                            : isJoining
+                                                                ? 'bg-indigo-50 border border-indigo-100'
+                                                                : 'bg-indigo-600 shadow-sm shadow-indigo-200'
+                                                            }`}
+                                                    >
+                                                        {isJoining ? (
+                                                            <ActivityIndicator size="small" color="#4f46e5" />
+                                                        ) : (
+                                                            <Text className={`text-xs font-bold ${isJoined ? 'text-slate-500' : 'text-white'}`}>
+                                                                {isJoined ? 'Joined' : 'Join'}
+                                                            </Text>
+                                                        )}
+                                                    </TouchableOpacity>
+                                                )}
+                                            </View>
+                                        </View>
                                     )
                                 })
                             ) : (
@@ -206,7 +236,6 @@ export default function CommunitiesScreen() {
                         </View>
                     </View>
                 </View>
-
             </ScrollView>
         </SafeAreaView>
     );

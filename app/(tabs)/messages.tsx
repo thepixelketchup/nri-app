@@ -8,8 +8,11 @@ import { useAuth } from '../../context/AuthContext';
 // Community IDs are used to identify community channels
 const communityIds = [
     'national_intro', 'national_travel', 'national_cricket',
+    // Amstelveen
     'hub_ams_gen', 'hub_ams_sports', 'hub_ams_moms',
+    // Amsterdam
     'hub_adam_gen', 'hub_adam_student',
+    // Eindhoven
     'hub_eind_gen', 'hub_eind_carpool'
 ];
 
@@ -41,7 +44,10 @@ export default function MessagesScreen() {
             const type = c.type; // 'messaging' usually
 
             if (activeTab === 'communities') {
-                return communityIds.includes(cid) || cid.startsWith('national_') || cid.startsWith('hub_');
+                return communityIds.includes(cid) ||
+                    cid.startsWith('national_') ||
+                    cid.startsWith('hub_') ||
+                    c.data?.category === 'community';
             }
             if (activeTab === 'events') {
                 // TODO: Ensure events create channels with 'event_' prefix or specific data
@@ -163,6 +169,7 @@ export default function MessagesScreen() {
 
             <View className="flex-1 bg-white">
                 <ChannelList
+                    key={activeTab}
                     filters={filters as any}
                     sort={sort}
                     channelRenderFilterFn={channelRenderFilterFn}

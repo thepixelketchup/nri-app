@@ -31,6 +31,7 @@ function RootNavigator() {
             <Stack.Screen name="directory/add" options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="directory/filters" options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="communities/index" options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="channel/[cid]" options={{ headerShown: false }} />
             <Stack.Screen name="+not-found" />
         </Stack>
     );
