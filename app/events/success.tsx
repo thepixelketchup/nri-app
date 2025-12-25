@@ -118,16 +118,26 @@ export default function EventSuccessScreen() {
     const handleJoinChat = async () => {
         if (!client || !user) return;
         try {
-            const channel = client.channel('messaging', `event-${id}`, {
+            const channel = client.channel('messaging', `event_${id}`, {
                 name: title,
                 image: imageUrl,
-                members: [user.uid],
+                members: [user.uid], // Ensures creation includes user
                 category: 'event'
             } as any);
+
             await channel.watch();
+            await channel.addMembers([user.uid]); // Explicitly add member in case they weren't in it
+
+            // Send System Message
+            await channel.sendMessage({
+                text: `${user.displayName || user.email?.split('@')[0] || 'Someone'} joined the group`,
+                type: 'system',
+                silent: true
+            });
+
             router.push(`/channel/${channel.cid}`);
         } catch (e) {
-            console.error(e);
+            console.error("Error opening chat:", e);
         }
     };
 

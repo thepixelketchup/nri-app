@@ -42,10 +42,13 @@ export default function CommunitiesScreen() {
 
     // Fetch User Profile for Joined Groups
     useEffect(() => {
-        if (!user) return;
+        if (!user) {
+            setUserData({ joinedGroups: [] });
+            return;
+        }
         const userRef = doc(db, 'users', user.uid);
         const unsub = onSnapshot(userRef, (doc) => {
-            setUserData(doc.data());
+            setUserData(doc.data() || { joinedGroups: [] });
         });
         return unsub;
     }, [user]);

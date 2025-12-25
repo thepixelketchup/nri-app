@@ -102,25 +102,6 @@ export default function EventDetailScreen() {
 
             setEvent({ ...event, attendeeIds: newAttendees });
 
-            // Stream Chat Channel Membership Logic
-            if (client && user.uid) {
-                const channelId = `event_${id}`;
-                const channel = client.channel('messaging', channelId, {
-                    name: event.title,
-                    image: event.imageUrl,
-                    category: 'event', // Important for filtering
-                    members: [user.uid] // Ensure creator is member if creating
-                });
-
-                if (!isAttending) {
-                    // User is JOINING
-                    await channel.addMembers([user.uid]);
-                } else {
-                    // User is LEAVING
-                    await channel.removeMembers([user.uid]);
-                }
-            }
-
             // If user just joined, navigate to success
             if (!isAttending) {
                 router.push({

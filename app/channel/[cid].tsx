@@ -4,7 +4,7 @@ import { Bell, BellOff, ChevronLeft, LogOut, Users, X } from 'lucide-react-nativ
 import { useEffect, useState } from 'react';
 import { Alert, Image, Modal, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Channel, MessageInput, MessageList, useChatContext } from 'stream-chat-expo';
+import { Channel, MessageInput, MessageList, Thread, useChatContext } from 'stream-chat-expo';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../utils/firebaseConfig';
 
@@ -16,6 +16,7 @@ export default function ChannelScreen() {
     const [showGroupInfo, setShowGroupInfo] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
     const [icon, setIcon] = useState<string | null>(null);
+    const [thread, setThread] = useState<any>(null);
     const router = useRouter();
 
     useEffect(() => {
@@ -147,38 +148,56 @@ export default function ChannelScreen() {
             <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-slate-100">
                 <View className="flex-row items-center flex-1 mr-4">
                     <TouchableOpacity
-                        onPress={() => router.back()}
+                        onPress={() => {
+                            if (thread) {
+                                setThread(null);
+                            } else {
+                                router.back();
+                            }
+                        }}
                         className="w-10 h-10 items-center justify-center -ml-2 rounded-full active:bg-slate-100"
                     >
                         <ChevronLeft size={28} color="#0f172a" />
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                        onPress={() => setShowGroupInfo(true)}
-                        className="ml-2 flex-1 flex-row items-center gap-3"
-                    >
-                        <View className="w-8 h-8 bg-indigo-50 rounded-full items-center justify-center overflow-hidden border border-indigo-100">
-                            {channelImage ? (
-                                <Image source={{ uri: channelImage }} className="w-full h-full" />
-                            ) : icon ? (
-                                <Text className="text-base">{icon}</Text>
-                            ) : (
-                                <Text className="text-indigo-600 font-bold text-xs">{channelName[0]?.toUpperCase()}</Text>
-                            )}
+                    {/* Show Channel Header only if we are NOT in a thread (or show customized header) */}
+                    {/* Actually, keeping the header is fine, but maybe change title for Thread? */}
+                    {/* For simplicity, we keep the main header for now, maybe handle thread title later */}
+                    {!thread && (
+                        <TouchableOpacity
+                            onPress={() => setShowGroupInfo(true)}
+                            className="ml-2 flex-1 flex-row items-center gap-3"
+                        >
+                            <View className="w-8 h-8 bg-indigo-50 rounded-full items-center justify-center overflow-hidden border border-indigo-100">
+                                {channelImage ? (
+                                    <Image source={{ uri: channelImage }} className="w-full h-full" />
+                                ) : icon ? (
+                                    <Text className="text-base">{icon}</Text>
+                                ) : (
+                                    <Text className="text-indigo-600 font-bold text-xs">{channelName[0]?.toUpperCase()}</Text>
+                                )}
+                            </View>
+                            <View>
+                                <Text className="text-lg font-bold text-slate-900" numberOfLines={1}>
+                                    {channelName}
+                                </Text>
+                                <Text className="text-xs text-slate-500 font-medium">Click for info</Text>
+                            </View>
+                        </TouchableOpacity>
+                    )}
+                    {thread && (
+                        <View className="ml-2 flex-1 justify-center">
+                            <Text className="text-lg font-bold text-slate-900">Thread</Text>
+                            <Text className="text-xs text-slate-500">Replying to message</Text>
                         </View>
-                        <View>
-                            <Text className="text-lg font-bold text-slate-900" numberOfLines={1}>
-                                {channelName}
-                            </Text>
-                            <Text className="text-xs text-slate-500 font-medium">Click for info</Text>
-                        </View>
-                    </TouchableOpacity>
+                    )}
                 </View>
             </View>
 
             <View className="flex-1">
                 <Channel
                     channel={channel}
+                    threadList={!!thread}
                     MessageSystem={({ message }: { message: any }) => (
                         <View className="py-2 items-center">
                             <View className="bg-slate-100 px-3 py-1 rounded-full">
@@ -189,8 +208,17 @@ export default function ChannelScreen() {
                         </View>
                     )}
                 >
-                    <MessageList />
-                    <MessageInput />
+                    {thread ? (
+                        <Thread
+                            thread={thread}
+                            onThreadDismount={() => setThread(null)}
+                        />
+                    ) : (
+                        <>
+                            <MessageList onThreadSelect={setThread} />
+                            <MessageInput />
+                        </>
+                    )}
                 </Channel>
             </View>
 
