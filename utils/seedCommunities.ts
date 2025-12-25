@@ -32,7 +32,7 @@ export const seedCommunities = async () => {
             console.log(`Created national group: ${group.name} (${channelId})`);
         }
 
-        console.log("Seeding Hub Groups...");
+        console.log("Seeding Local Groups...");
         for (const group of GROUPS.hubs) {
             const q = query(communitiesRef, where("name", "==", group.name));
             const snapshot = await getDocs(q);
@@ -50,11 +50,11 @@ export const seedCommunities = async () => {
                 name: group.name,
                 icon: group.icon,
                 desc: group.desc,
-                type: 'hub', // Using 'hub' to match index.tsx filter
+                type: 'local', // Changed from 'hub' to 'local'
                 city: group.city,
                 channelId: channelId
             });
-            console.log(`Created hub group: ${group.name} (${channelId})`);
+            console.log(`Created local group: ${group.name} (${channelId})`);
         }
         console.log("Communities seeding complete.");
     } catch (error) {

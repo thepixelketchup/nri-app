@@ -1,51 +1,33 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { arrayUnion, collection, doc, getDocs, onSnapshot, query, setDoc } from 'firebase/firestore';
-import { Globe, Map, X } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { ArrowLeft, Globe, Map, Plus, UsersRound } from 'lucide-react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Channel as StreamChannel } from 'stream-chat'; // Renamed to avoid conflict
 import { useChatContext } from 'stream-chat-expo';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../utils/firebaseConfig';
 
-const CITIES = ['All', 'Amstelveen', 'Amsterdam', 'Eindhoven', 'Rotterdam', 'Utrecht'];
+// Define simpler interface for our UI needs, or just use StreamChannel
+type Channel = StreamChannel;
+
 
 export default function CommunitiesScreen() {
     const router = useRouter();
     const { client } = useChatContext();
     const { user } = useAuth();
-    const [communities, setCommunities] = useState<any[]>([]);
+
     const [loading, setLoading] = useState(true);
-    const [joiningIds, setJoiningIds] = useState<string[]>([]);
+    const [refreshing, setRefreshing] = useState(false);
+    const [channels, setChannels] = useState<Channel[]>([]);
     const [userData, setUserData] = useState<any>(null);
-    const [selectedCity, setSelectedCity] = useState('All');
 
+
+    // Fetch User Profile (for joined status check fallback)
     useEffect(() => {
-        fetchCommunities();
-    }, []);
-
-    const fetchCommunities = async () => {
-        try {
-            const q = query(collection(db, 'public', 'data', 'communities'));
-            const snapshot = await getDocs(q);
-            const data = snapshot.docs.map(doc => doc.data());
-            setCommunities(data);
-        } catch (error) {
-            console.error("Error fetching communities:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const nationalGroups = communities.filter(c => c.type === 'national');
-    const hubGroups = communities.filter(c => c.type === 'hub');
-
-    // Fetch User Profile for Joined Groups
-    useEffect(() => {
-        if (!user) {
-            setUserData({ joinedGroups: [] });
-            return;
-        }
+        if (!user) return;
         const userRef = doc(db, 'users', user.uid);
         const unsub = onSnapshot(userRef, (doc) => {
             setUserData(doc.data() || { joinedGroups: [] });
@@ -53,226 +35,233 @@ export default function CommunitiesScreen() {
         return unsub;
     }, [user]);
 
-    const handleJoin = async (group: any, channelId: string) => {
-        if (!client || !user || !client.userID) {
-            Alert.alert("Connection Error", "Chat client not ready. Please try again.");
-            return;
-        }
+    const fetchCommunities = async () => {
+        if (!client) return;
 
-        // If already joined, do nothing (button should be disabled/hidden logic)
-        if (userData?.joinedGroups?.includes(channelId)) return;
-
-        setJoiningIds(prev => [...prev, channelId]);
-
-        // 1. Update Firestore Profile
-        const userRef = doc(db, 'users', user.uid);
         try {
-            await setDoc(userRef, {
-                joinedGroups: arrayUnion(channelId)
-            }, { merge: true });
-        } catch (e) {
-            console.error("Error updating user profile:", e);
-            Alert.alert("Error", "Failed to update your profile. Please try again.");
-        }
+            // Query Stream directly for all community channels
+            const filters = {
+                type: 'messaging',
+                category: 'community',
+                // We fetch all to allow client-side filtering/grouping
+            };
+            const sort = { name: 1 }; // Alphabetical
 
-        // 2. Stream Channel Logic
-        try {
-            const channelType = 'messaging';
-
-            const channel = client.channel(channelType, channelId, {
-                name: group.name,
-                image: group.icon, // Store icon in channel data
-                members: [user.uid],
-                category: 'community'
-            } as any);
-
-            await channel.watch();
-            await channel.addMembers([user.uid]);
-
-            await channel.sendMessage({
-                text: `${user.displayName || user.email?.split('@')[0] || 'Someone'} joined the group`,
-                type: 'system',
-                silent: true
+            const result = await client.queryChannels(filters, sort as any, {
+                watch: true,
+                state: true,
+                limit: 50,
             });
-        } catch (e) {
-            console.error("Error joining Stream channel:", e);
-            Alert.alert("Error", "Failed to join the chat channel. Please try again.");
+
+            setChannels(result);
+        } catch (error) {
+            console.error("Error fetching communities from Stream:", error);
         } finally {
-            setJoiningIds(prev => prev.filter(id => id !== channelId));
+            setLoading(false);
+            setRefreshing(false);
         }
     };
 
-    const filteredHubs = selectedCity === 'All'
-        ? hubGroups
-        : hubGroups.filter(h => h.city === selectedCity);
+    useFocusEffect(
+        useCallback(() => {
+            fetchCommunities();
+        }, [client])
+    );
 
-    if (loading) {
-        return (
-            <View className="flex-1 items-center justify-center bg-white">
-                <ActivityIndicator size="large" color="#4f46e5" />
-            </View>
-        );
-    }
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchCommunities();
+    };
+
+
+
+    // Grouping Logic
+    const nationalGroups = useMemo(() =>
+        channels.filter(c => (c.data as any)?.communityType === 'national'),
+        [channels]);
+
+    const localGroups = useMemo(() =>
+        channels.filter(c => (c.data as any)?.communityType !== 'national'),
+        [channels]);
+
+    // Extract unique cities from local groups
+    const uniqueCities = useMemo(() => {
+        return Array.from(new Set(
+            localGroups
+                .map(c => (c.data as any)?.city)
+                .filter(city => city && typeof city === 'string')
+        )).sort();
+    }, [channels]);
+
+
+
+    const { top } = useSafeAreaInsets();
 
     return (
-        <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-            {/* Header */}
-            <View className="px-6 pt-6 pb-2 bg-white flex-row items-start justify-between">
-                <View>
-                    <Text className="text-4xl font-extrabold text-slate-900 tracking-tighter">Communities</Text>
-                    <Text className="text-slate-500 font-medium text-base mt-1">Connect with your tribe</Text>
-                </View>
+        <View className="flex-1 bg-white" style={{ paddingTop: top }}>
+            {/* Standard Nav Bar Header */}
+            <View className="px-6 py-3 bg-white flex-row items-center justify-between border-b border-slate-50">
                 <TouchableOpacity
                     onPress={() => router.back()}
-                    className="mt-1 w-8 h-8 rounded-full bg-slate-100 items-center justify-center"
+                    className="w-10 h-10 rounded-full bg-slate-50 items-center justify-center border border-slate-100"
                 >
-                    <X size={20} color="#64748b" />
+                    <ArrowLeft size={20} color="#64748b" />
                 </TouchableOpacity>
+
+                <Text className="text-lg font-bold text-slate-900">Discover Communities</Text>
+
+                {/* Empty View for center balance */}
+                <View className="w-10" />
             </View>
 
-            <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
-                {/* National Section */}
-                <View className="mt-6 px-6">
-                    <View className="flex-row items-center gap-2 mb-4">
-                        <View className="w-8 h-8 rounded-full bg-indigo-50 items-center justify-center border border-indigo-100">
-                            <Globe size={16} color="#4f46e5" />
-                        </View>
-                        <Text className="text-lg font-bold text-slate-900">National Groups</Text>
-                    </View>
-
-                    <View className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                        {nationalGroups.map((group, i) => {
-                            const isJoined = userData?.joinedGroups?.includes(group.channelId);
-                            const isJoining = joiningIds.includes(group.channelId);
-
-                            return (
-                                <View
-                                    key={group.channelId}
-                                    className={`p-4 flex-row items-center gap-4 ${i !== 0 ? 'border-t border-slate-50' : ''}`}
-                                >
-                                    <View className="w-10 h-10 bg-slate-50 rounded-full items-center justify-center text-xl">
-                                        <Text className="text-xl">{group.icon}</Text>
-                                    </View>
-                                    <View className="flex-1">
-                                        <Text className="font-bold text-slate-900 text-base">{group.name}</Text>
-                                        <Text className="text-sm text-slate-500">{group.desc}</Text>
-                                    </View>
-
-                                    <View className="w-[85px] items-end justify-center">
-                                        {!userData ? (
-                                            <ActivityIndicator size="small" color="#94a3b8" />
-                                        ) : (
-                                            <TouchableOpacity
-                                                onPress={() => handleJoin(group, group.channelId)}
-                                                disabled={isJoined || isJoining}
-                                                className={`px-4 py-2 rounded-full ${isJoined
-                                                    ? 'bg-slate-100'
-                                                    : isJoining
-                                                        ? 'bg-indigo-50 border border-indigo-100'
-                                                        : 'bg-indigo-600 shadow-sm shadow-indigo-200'
-                                                    }`}
-                                            >
-                                                {isJoining ? (
-                                                    <ActivityIndicator size="small" color="#4f46e5" />
-                                                ) : (
-                                                    <Text className={`text-xs font-bold ${isJoined ? 'text-slate-500' : 'text-white'}`}>
-                                                        {isJoined ? 'Joined' : 'Join'}
-                                                    </Text>
-                                                )}
-                                            </TouchableOpacity>
-                                        )}
-                                    </View>
-                                </View>
-                            )
-                        })}
-                    </View>
+            {loading && channels.length === 0 ? (
+                <View className="flex-1 items-center justify-center bg-white">
+                    <ActivityIndicator size="large" color="#4f46e5" />
                 </View>
+            ) : (
+                <ScrollView area-label="main-scroll"
+                    className="flex-1"
+                    contentContainerStyle={{ paddingBottom: 60 }}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4f46e5" />}
+                >
+                    {/* National Section */}
+                    {nationalGroups.length > 0 && (
+                        <View className="mt-6 px-6">
+                            <View className="flex-row items-center gap-2 mb-4">
+                                <View className="w-8 h-8 rounded-full bg-indigo-50 items-center justify-center border border-indigo-100">
+                                    <Globe size={16} color="#4f46e5" />
+                                </View>
+                                <Text className="text-lg font-bold text-slate-900">Netherlands Community</Text>
+                            </View>
 
-                {/* Local Hubs Section */}
-                <View className="mt-8">
-                    <View className="px-6 flex-row items-center gap-2 mb-4">
-                        <View className="w-8 h-8 rounded-full bg-indigo-50 items-center justify-center border border-indigo-100">
-                            <Map size={16} color="#4f46e5" />
-                        </View>
-                        <Text className="text-lg font-bold text-slate-900">Local Hubs</Text>
-                    </View>
-
-                    {/* City Filters */}
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        className="mb-4"
-                        contentContainerStyle={{ paddingHorizontal: 24, gap: 8 }}
-                    >
-                        {CITIES.map((city) => (
-                            <TouchableOpacity
-                                key={city}
-                                onPress={() => setSelectedCity(city)}
-                                className={`px-4 py-2 rounded-full border ${selectedCity === city ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-slate-200'}`}
-                            >
-                                <Text className={`font-bold text-xs ${selectedCity === city ? 'text-white' : 'text-slate-600'}`}>
-                                    {city}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-
-                    <View className="px-6">
-                        <View className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                            {filteredHubs.length > 0 ? (
-                                filteredHubs.map((group, i) => {
-                                    const isJoined = userData?.joinedGroups?.includes(group.channelId);
-                                    const isJoining = joiningIds.includes(group.channelId);
+                            <View className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                                {nationalGroups.map((channel, i) => {
+                                    const isJoined = !!channel.state.members[user?.uid || ''];
+                                    const data = channel.data as any;
+                                    const memberCount = channel.data?.member_count || (channel.state as any).member_count || 0;
 
                                     return (
                                         <View
-                                            key={group.channelId}
+                                            key={channel.id}
                                             className={`p-4 flex-row items-center gap-4 ${i !== 0 ? 'border-t border-slate-50' : ''}`}
                                         >
-                                            <View className="w-10 h-10 bg-slate-50 rounded-full items-center justify-center">
-                                                <Text className="text-xl">{group.icon}</Text>
+                                            <View className="w-10 h-10 bg-slate-50 rounded-full items-center justify-center overflow-hidden">
+                                                {/* Fallback Icon logic */}
+                                                <Text className="text-xl">{data.image || '🇳🇱'}</Text>
                                             </View>
                                             <View className="flex-1">
-                                                <Text className="font-bold text-slate-900 text-base">{group.name}</Text>
-                                                <Text className="text-sm text-slate-500">{group.city} • {group.desc}</Text>
+                                                <Text className="font-bold text-slate-900 text-base">{data.name || 'Unnamed Group'}</Text>
+                                                {/* Member Count */}
+                                                <View className="flex-row items-center gap-1">
+                                                    <UsersRound size={12} color="#64748b" />
+                                                    <Text className="text-xs text-slate-500 font-medium">{memberCount} {memberCount === 1 ? 'member' : 'members'}</Text>
+                                                </View>
                                             </View>
 
                                             <View className="w-[85px] items-end justify-center">
-                                                {!userData ? (
-                                                    <ActivityIndicator size="small" color="#94a3b8" />
-                                                ) : (
-                                                    <TouchableOpacity
-                                                        onPress={() => handleJoin(group, group.channelId)}
-                                                        disabled={isJoined || isJoining}
-                                                        className={`px-4 py-2 rounded-full ${isJoined
-                                                            ? 'bg-slate-100'
-                                                            : isJoining
-                                                                ? 'bg-indigo-50 border border-indigo-100'
-                                                                : 'bg-indigo-600 shadow-sm shadow-indigo-200'
-                                                            }`}
-                                                    >
-                                                        {isJoining ? (
-                                                            <ActivityIndicator size="small" color="#4f46e5" />
-                                                        ) : (
-                                                            <Text className={`text-xs font-bold ${isJoined ? 'text-slate-500' : 'text-white'}`}>
-                                                                {isJoined ? 'Joined' : 'Join'}
-                                                            </Text>
-                                                        )}
-                                                    </TouchableOpacity>
-                                                )}
+                                                <TouchableOpacity
+                                                    onPress={() => router.push(`/communities/preview?cid=${channel.cid}`)}
+                                                    className={`w-20 py-2 rounded-full items-center justify-center ${isJoined
+                                                        ? 'bg-slate-100'
+                                                        : 'bg-indigo-600 shadow-sm shadow-indigo-200'
+                                                        }`}
+                                                >
+                                                    <Text className={`text-xs font-bold ${isJoined ? 'text-slate-500' : 'text-white'}`}>
+                                                        {isJoined ? 'Joined' : 'Join'}
+                                                    </Text>
+                                                </TouchableOpacity>
                                             </View>
                                         </View>
                                     )
-                                })
-                            ) : (
-                                <View className="p-8 items-center justify-center">
-                                    <Text className="text-slate-400 font-medium">No hubs found in {selectedCity}</Text>
-                                </View>
-                            )}
+                                })}
+                            </View>
                         </View>
+                    )}
+
+                    {/* Local Hubs Section - Grouped by City */}
+
+
+                    {uniqueCities.length > 0 ? (
+                        uniqueCities.map((city) => {
+                            const cityGroups = localGroups.filter(c => (c.data as any)?.city === city);
+                            if (cityGroups.length === 0) return null;
+
+                            return (
+                                <View key={city as string} className="mt-8 px-6">
+                                    <View className="flex-row items-center gap-2 mb-4">
+                                        <View className="w-8 h-8 rounded-full bg-indigo-50 items-center justify-center border border-indigo-100">
+                                            <Map size={16} color="#4f46e5" />
+                                        </View>
+                                        <Text className="text-lg font-bold text-slate-900">{city as string} Community</Text>
+                                    </View>
+
+                                    <View className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                                        {cityGroups.map((channel, i) => {
+                                            const isJoined = !!channel.state.members[user?.uid || ''];
+                                            const data = channel.data as any;
+                                            const memberCount = channel.data?.member_count || (channel.state as any).member_count || 0;
+
+                                            return (
+                                                <View
+                                                    key={channel.id}
+                                                    className={`p-4 flex-row items-center gap-4 ${i !== 0 ? 'border-t border-slate-50' : ''}`}
+                                                >
+                                                    <View className="w-10 h-10 bg-slate-50 rounded-full items-center justify-center overflow-hidden">
+                                                        <Text className="text-xl">{data.image || '📍'}</Text>
+                                                    </View>
+                                                    <View className="flex-1">
+                                                        <Text className="font-bold text-slate-900 text-base">{data.name || 'Unnamed Group'}</Text>
+                                                        {/* Member Count */}
+                                                        <View className="flex-row items-center gap-1">
+                                                            <UsersRound size={12} color="#64748b" />
+                                                            <Text className="text-xs text-slate-500 font-medium">{memberCount} {memberCount === 1 ? 'member' : 'members'}</Text>
+                                                        </View>
+                                                    </View>
+
+                                                    <View className="w-[85px] items-end justify-center">
+                                                        <TouchableOpacity
+                                                            onPress={() => router.push(`/communities/preview?cid=${channel.cid}`)}
+                                                            className={`w-20 py-2 rounded-full items-center justify-center ${isJoined
+                                                                ? 'bg-slate-100'
+                                                                : 'bg-indigo-600 shadow-sm shadow-indigo-200'
+                                                                }`}
+                                                        >
+                                                            <Text className={`text-xs font-bold ${isJoined ? 'text-slate-500' : 'text-white'}`}>
+                                                                {isJoined ? 'Joined' : 'Join'}
+                                                            </Text>
+                                                        </TouchableOpacity>
+                                                    </View>
+                                                </View>
+                                            )
+                                        })}
+                                    </View>
+                                </View>
+                            )
+                        })
+                    ) : (
+                        <View className="p-8 items-center justify-center">
+                            <Text className="text-slate-400 font-medium">No communities found</Text>
+                        </View>
+                    )}
+
+
+                    {/* Request Community Section */}
+                    <View className="mx-6 mt-8 mb-8">
+                        <TouchableOpacity
+                            onPress={() => router.push('/communities/request')}
+                            className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-6 items-center flex-row justify-center gap-3"
+                        >
+                            <View className="w-10 h-10 bg-white rounded-full items-center justify-center border border-slate-100">
+                                <Plus size={20} color="#64748b" />
+                            </View>
+                            <View>
+                                <Text className="font-bold text-slate-700 text-lg">Don't see your city?</Text>
+                                <Text className="text-slate-500 text-sm">Request to start a new community</Text>
+                            </View>
+                        </TouchableOpacity>
                     </View>
-                </View>
-            </ScrollView>
-        </SafeAreaView>
+                </ScrollView>
+            )}
+        </View>
     );
 }

@@ -1,25 +1,14 @@
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChannelList, useChatContext } from 'stream-chat-expo';
+import { FilterPills } from '../../components/ui/FilterPills';
 import { useAuth } from '../../context/AuthContext';
-
-// Community IDs are used to identify community channels
-const communityIds = [
-    'national_intro', 'national_travel', 'national_cricket',
-    // Amstelveen
-    'hub_ams_gen', 'hub_ams_sports', 'hub_ams_moms',
-    // Amsterdam
-    'hub_adam_gen', 'hub_adam_student',
-    // Eindhoven
-    'hub_eind_gen', 'hub_eind_carpool'
-];
 
 export default function MessagesScreen() {
     const router = useRouter();
     const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState<'communities' | 'events' | 'marketplace' | 'business'>('communities');
     const { client } = useChatContext();
 
     if (!user || !client || !client.userID) {
@@ -30,66 +19,68 @@ export default function MessagesScreen() {
         );
     }
 
-    // Single consistent query to fetch all user channels
-    const filters = useMemo(() => ({
-        members: { $in: [client.userID] }
-    }), [client.userID]);
+    // Filter State
+    const [selectedFilter, setSelectedFilter] = useState('all');
+
+    // Memoized Filters
+    const filters = useMemo(() => {
+        const baseFilter = {
+            type: 'messaging',
+            members: { $in: [client.userID as string] },
+        };
+
+        switch (selectedFilter) {
+            case 'direct':
+                return {
+                    ...baseFilter,
+                    member_count: 2, // 1:1 DMs (Safe fallback)
+                    // category: { $ne: 'community' }, // Removed to ensure DMs appear
+                };
+            case 'events':
+                return {
+                    ...baseFilter,
+                    category: 'event',
+                };
+            case 'market':
+                return {
+                    ...baseFilter,
+                    category: 'marketplace', // Corrected from 'commerce'
+                };
+            case 'all':
+            default:
+                return {
+                    ...baseFilter,
+                    // category: { $ne: 'community' }, // Temporarily disabled
+                };
+        }
+    }, [client.userID, selectedFilter]);
 
     const sort = { last_message_at: -1 } as const;
-
-    // Client-side filtering logic
-    const channelRenderFilterFn = (channels: any) => {
-        return channels.filter((c: any) => {
-            const cid = c.id || '';
-            const type = c.type; // 'messaging' usually
-
-            if (activeTab === 'communities') {
-                return communityIds.includes(cid) ||
-                    cid.startsWith('national_') ||
-                    cid.startsWith('hub_') ||
-                    c.data?.category === 'community';
-            }
-            if (activeTab === 'events') {
-                // TODO: Ensure events create channels with 'event_' prefix or specific data
-                // For now assuming event channels might have specific ID pattern or data
-                return cid.startsWith('event_') || c.data?.category === 'event';
-            }
-            if (activeTab === 'marketplace') {
-                return cid.startsWith('market_') || c.data?.category === 'marketplace';
-            }
-            if (activeTab === 'business') {
-                return cid.startsWith('business_') || c.data?.category === 'business';
-            }
-            return false;
-        });
-    };
-
-    const formatTime = (dateString: string | Date | undefined) => {
-        if (!dateString) return '';
-        const date = new Date(dateString);
-        const now = new Date();
-        const isToday = now.toDateString() === date.toDateString();
-
-        const yesterday = new Date(now);
-        yesterday.setDate(now.getDate() - 1);
-        const isYesterday = yesterday.toDateString() === date.toDateString();
-
-        if (isToday) {
-            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        } else if (isYesterday) {
-            return 'Yesterday';
-        } else {
-            return date.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: '2-digit' });
-        }
-    };
 
     // Custom Channel Preview Implementation
     const renderChannelPreview = ({ channel }: any) => {
         const lastMessage = channel.state.messages[channel.state.messages.length - 1];
         const unreadCount = channel.countUnread();
-        const displayTitle = channel.data.name || channel.id || 'Unknown';
+        let displayTitle = channel.data.name || channel.id || 'Unknown';
         const displayImage = channel.data.image;
         const date = lastMessage?.created_at;
+
+        const formatTime = (date: Date) => {
+            const now = new Date();
+            const yesterday = new Date(now);
+            yesterday.setDate(now.getDate() - 1);
+
+            const isToday = date.toDateString() === now.toDateString();
+            const isYesterday = yesterday.toDateString() === date.toDateString();
+
+            if (isToday) {
+                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } else if (isYesterday) {
+                return 'Yesterday';
+            } else {
+                return date.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: '2-digit' });
+            }
+        };
 
         return (
             <TouchableOpacity
@@ -138,99 +129,29 @@ export default function MessagesScreen() {
     return (
         <SafeAreaView className="flex-1 bg-white" edges={['top']}>
             {/* Header Title */}
-            <View className="px-6 pt-4 pb-4 bg-white">
-                <View className="flex-row justify-between items-start">
-                    <View>
-                        <Text className="text-4xl font-extrabold text-slate-900 tracking-tighter">Messages</Text>
-                        <Text className="text-slate-500 font-medium text-base mt-1">Your conversations</Text>
-                    </View>
-                    {activeTab === 'communities' ? (
-                        <TouchableOpacity
-                            onPress={() => router.push('/communities')}
-                            className="bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-full flex-row items-center gap-1 mt-1"
-                        >
-                            <Text className="text-indigo-600 font-bold text-xs">Discover Communities</Text>
-                        </TouchableOpacity>
-                    ) : (
-                        <View className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200 mt-1">
-                            <Text className="text-slate-600 font-bold text-lg">{user.email ? user.email[0].toUpperCase() : 'U'}</Text>
-                        </View>
-                    )}
-                </View>
+            <View className="px-6 py-4 bg-white flex-row justify-between items-center">
+                <Text className="text-3xl font-extrabold text-slate-900 tracking-tight">Inbox</Text>
             </View>
 
-            {/* Edge-to-Edge Scrollable Filter Pills */}
-            <View className="bg-white pb-4">
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    className="flex-row"
-                    contentContainerStyle={{ paddingHorizontal: 24, gap: 8 }}
-                >
-                    {[
-                        { id: 'communities', label: 'Communities' },
+            {/* Filter Pills */}
+            <View className="pb-2">
+                <FilterPills
+                    items={[
+                        { id: 'all', label: 'All' },
+                        { id: 'direct', label: 'Direct' },
                         { id: 'events', label: 'Events' },
-                        { id: 'marketplace', label: 'Marketplace' },
-                        { id: 'business', label: 'Business' },
-                    ].map((tab) => (
-                        <TouchableOpacity
-                            key={tab.id}
-                            onPress={() => setActiveTab(tab.id as any)}
-                            className={`px-5 py-2.5 rounded-full border ${activeTab === tab.id ? 'bg-indigo-600 border-indigo-600' : 'bg-slate-50 border-slate-100'}`}
-                        >
-                            <Text className={`font-bold text-sm ${activeTab === tab.id ? 'text-white' : 'text-slate-600'}`}>
-                                {tab.label}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-            </View>
-
-            <View className="flex-1 bg-white">
-                <ChannelList
-                    key={activeTab}
-                    filters={filters as any}
-                    sort={sort}
-                    channelRenderFilterFn={channelRenderFilterFn}
-                    additionalFlatListProps={{
-                        style: { backgroundColor: 'white' },
-                        contentContainerStyle: { backgroundColor: 'white', flexGrow: 1 }
-                    }}
-                    Preview={renderChannelPreview}
-                    onSelect={(channel) => {
-                        router.push(`/channel/${channel.cid}`);
-                    }}
-                    EmptyStateIndicator={() => (
-                        <View className="flex-1 items-center justify-center p-10 opacity-50 bg-white">
-                            <View className="w-16 h-16 bg-slate-100 rounded-full items-center justify-center mb-4">
-                                <Text className="text-3xl grayscale">
-                                    {activeTab === 'communities' && '👥'}
-                                    {activeTab === 'events' && '📅'}
-                                    {activeTab === 'marketplace' && '🛍️'}
-                                    {activeTab === 'business' && '🏪'}
-                                </Text>
-                            </View>
-                            <Text className="text-center font-bold text-slate-900 text-lg mb-2">
-                                No {activeTab} chats
-                            </Text>
-                            <Text className="text-center text-sm text-slate-500 leading-5">
-                                {activeTab === 'communities' && 'Join hubs and groups to connect with others.'}
-                                {activeTab === 'events' && 'RSVP to events to join their discussion groups.'}
-                                {activeTab === 'marketplace' && 'Start buying or selling to message here.'}
-                                {activeTab === 'business' && 'Contact local businesses for inquiries.'}
-                            </Text>
-                            {activeTab === 'communities' && (
-                                <TouchableOpacity
-                                    onPress={() => router.push('/communities')}
-                                    className="mt-6 bg-indigo-600 px-6 py-3 rounded-full shadow-sm shadow-indigo-200"
-                                >
-                                    <Text className="text-white font-bold">Discover Communities</Text>
-                                </TouchableOpacity>
-                            )}
-                        </View>
-                    )}
+                        { id: 'market', label: 'Market' }
+                    ]}
+                    selectedId={selectedFilter}
+                    onSelect={setSelectedFilter}
                 />
             </View>
+
+            <ChannelList
+                filters={filters}
+                sort={sort}
+                Preview={renderChannelPreview}
+            />
         </SafeAreaView>
     );
 }

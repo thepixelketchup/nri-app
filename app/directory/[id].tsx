@@ -118,7 +118,7 @@ export default function BusinessDetailScreen() {
                     )}
 
                     {/* Header Actions */}
-                    <View className="absolute top-0 w-full flex-row justify-between px-6 z-10" style={{ paddingTop: insets.top + 10 }}>
+                    <View className="absolute top-0 w-full flex-row justify-between px-6 z-10" style={{ paddingTop: insets.top + 12 }}>
                         <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 bg-black/20 backdrop-blur-md rounded-full items-center justify-center border border-white/10">
                             <ArrowLeft size={20} color="white" />
                         </TouchableOpacity>
