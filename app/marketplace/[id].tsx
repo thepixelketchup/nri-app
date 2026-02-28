@@ -86,6 +86,11 @@ export default function MarketDetailScreen() {
             return;
         }
 
+        if (!client || !client.userID) {
+            Alert.alert("Connection Warning", "Chat is initializing. Please try again in a moment.");
+            return;
+        }
+
         try {
             // Track unique contact click
             const contactRef = doc(db, 'public', 'data', 'market', String(id), 'contacts', user.uid);
@@ -134,6 +139,9 @@ export default function MarketDetailScreen() {
             </View>
         );
     }
+
+    // Safety check for chat connection
+    const isChatConnected = client && client.userID;
 
     if (!item) return null;
 

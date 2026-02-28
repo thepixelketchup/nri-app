@@ -41,7 +41,7 @@ export default function MessagesScreen() {
                     ...baseFilter,
                     category: 'event',
                 };
-            case 'market':
+            case 'marketplace':
                 return {
                     ...baseFilter,
                     category: 'marketplace', // Corrected from 'commerce'
@@ -140,7 +140,7 @@ export default function MessagesScreen() {
                         { id: 'all', label: 'All' },
                         { id: 'direct', label: 'Direct' },
                         { id: 'events', label: 'Events' },
-                        { id: 'market', label: 'Market' }
+                        { id: 'marketplace', label: 'Marketplace' }
                     ]}
                     selectedId={selectedFilter}
                     onSelect={setSelectedFilter}

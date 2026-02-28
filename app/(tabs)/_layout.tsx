@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Calendar, Home, MessageCircle, ShoppingBag, Users } from 'lucide-react-native';
+import { Calendar, Home, MessageCircle, ShoppingBag, Store, Users } from 'lucide-react-native';
 
 export default function TabLayout() {
     return (
@@ -46,7 +46,7 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
-                name="market"
+                name="marketplace"
                 options={{
                     title: 'Marketplace',
                     tabBarIcon: ({ color }) => <ShoppingBag color={color} size={24} />,
@@ -55,16 +55,16 @@ export default function TabLayout() {
             <Tabs.Screen
                 name="messages"
                 options={{
-                    title: 'Inbox', // Renamed from Messages
+                    title: 'Inbox',
+                    href: null,
                     tabBarIcon: ({ color }) => <MessageCircle color={color} size={24} />,
                 }}
             />
-
-            {/* Hidden Tabs */}
             <Tabs.Screen
                 name="directory"
                 options={{
-                    href: null, // Hide from tab bar
+                    title: 'Store',
+                    tabBarIcon: ({ color }) => <Store color={color} size={24} />,
                 }}
             />
         </Tabs>

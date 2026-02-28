@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Flag, Home, Plus } from 'lucide-react-native';
+import { Flag, Home, MessageCircle, Plus, User } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,14 +14,13 @@ export default function HomeScreen() {
     const [error, setError] = useState<string | null>(null);
 
     const fetchFeed = async () => {
-        if (!feedClient) return;
+        if (!feedClient || !user) return;
         setError(null);
         try {
-            // Read from 'user:global'
-            const feed = feedClient.feed('user', 'global');
+            // Read from 'timeline:uid' (standard feed for following users)
+            const feed = feedClient.feed('timeline', user.uid);
 
             // Using getOrCreate({ watch: true }) as recommended for real-time
-            // The user snippet suggests this is the way to read and subscribe
             const results = await feed.getOrCreate({ limit: 20, watch: true });
 
             // Note: results from getOrCreate matching strictly what user showed
@@ -130,11 +129,23 @@ export default function HomeScreen() {
 
     return (
         <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-            <View className="px-4 pb-2 bg-white flex-row justify-between items-center z-10">
-                <Text className="text-3xl font-extrabold text-slate-900 tracking-tight">Home Feed</Text>
-                <TouchableOpacity onPress={() => router.push('/profile')} className="w-10 h-10 bg-slate-100 rounded-full items-center justify-center">
-                    <Text className="text-indigo-600 font-bold text-lg">U</Text>
-                </TouchableOpacity>
+            <View className="px-6 pt-4 pb-2 bg-white flex-row justify-between items-start">
+                <View className="flex-1">
+                    <Text className="text-4xl font-extrabold text-slate-900 tracking-tighter">
+                        Home
+                    </Text>
+                    <Text className="text-slate-500 font-medium text-base mt-1">
+                        Your community updates
+                    </Text>
+                </View>
+                <View className="flex-row gap-2">
+                    <TouchableOpacity onPress={() => router.push('/messages')} className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-full items-center justify-center shadow-sm mt-1.5">
+                        <MessageCircle color="#64748b" size={20} strokeWidth={2} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => router.push('/profile')} className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-full items-center justify-center shadow-sm mt-1.5">
+                        <User color="#64748b" size={20} strokeWidth={2} />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             {loading && !refreshing ? (

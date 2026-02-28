@@ -12,11 +12,11 @@ import { useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { STRINGS } from '../../constants/Strings';
-import { useMarket } from '../../context/MarketContext';
+import { useMarketplace } from '../../context/MarketplaceContext';
 
-export default function MarketFiltersScreen() {
+export default function MarketplaceFiltersScreen() {
     const router = useRouter();
-    const { filters, setFilters } = useMarket();
+    const { filters, setFilters } = useMarketplace();
 
     const [category, setCategory] = useState(filters.category);
     const [type, setType] = useState(filters.type);

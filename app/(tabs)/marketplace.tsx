@@ -7,12 +7,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { STRINGS } from '../../constants/Strings';
-import { useMarket } from '../../context/MarketContext';
+import { useMarketplace } from '../../context/MarketplaceContext';
 import { db } from '../../utils/firebaseConfig';
 
-export default function MarketScreen() {
+export default function MarketplaceScreen() {
     const router = useRouter();
-    const { filters } = useMarket();
+    const { filters } = useMarketplace();
 
     const [items, setItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -117,7 +117,7 @@ export default function MarketScreen() {
     const renderMarketItem = ({ item }: { item: any }) => (
         <TouchableOpacity
             activeOpacity={0.9}
-            onPress={() => router.push(`/market/${item.id}`)}
+            onPress={() => router.push(`/marketplace/${item.id}`)}
             className="bg-white rounded-2xl border border-slate-100 mb-4 overflow-hidden flex-row p-3 gap-4"
             style={{
                 shadowColor: "#000",
@@ -215,7 +215,7 @@ export default function MarketScreen() {
                 <View className="flex-row gap-2">
                     <TouchableOpacity
                         onPress={() => router.push({
-                            pathname: '/market/filters',
+                            pathname: '/marketplace/filters',
                             params: { category: filters.category, type: filters.type }
                         })}
                         className={`w-10 h-10 rounded-full items-center justify-center border relative ${activeFilterCount > 0 ? 'bg-indigo-50 border-indigo-200' : 'bg-slate-50 border-slate-100'}`}
@@ -228,7 +228,7 @@ export default function MarketScreen() {
                         )}
                     </TouchableOpacity>
                     <TouchableOpacity
-                        onPress={() => router.push('/market/add')}
+                        onPress={() => router.push('/marketplace/add')}
                         className="bg-indigo-600 w-10 h-10 rounded-full items-center justify-center"
                         style={{
                             shadowColor: "#4f46e5",

@@ -11,6 +11,7 @@ interface AuthContextType {
     signOut: () => Promise<void>;
     streamToken: string | null;
     feedClient: FeedsClient | null;
+    isChatConnected: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextType>({
     signOut: async () => { },
     streamToken: null,
     feedClient: null,
+    isChatConnected: false,
 });
 
 export function useAuth() {
@@ -102,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, signInGuest, signOut, streamToken, feedClient }}>
+        <AuthContext.Provider value={{ user, loading, signInGuest, signOut, streamToken, feedClient, isChatConnected: !!client?.userID }}>
             {children}
         </AuthContext.Provider>
     );

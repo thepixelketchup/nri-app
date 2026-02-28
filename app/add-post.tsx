@@ -21,7 +21,7 @@ export default function AddPostScreen() {
         if (params.initialCategory) setCategory(params.initialCategory as string);
         if (params.initialType) setType(params.initialType as string);
     }, [params]);
-    const [type, setType] = useState('market'); // market | directory | guide
+    const [type, setType] = useState('marketplace'); // marketplace | directory | guide
     const [title, setTitle] = useState('');
     const [desc, setDesc] = useState('');
     const [price, setPrice] = useState('');
@@ -41,11 +41,11 @@ export default function AddPostScreen() {
             const collectionName = (type === 'event' || type === 'home') ? 'events' : 'market';
             let marketType = undefined;
 
-            if (type === 'market') marketType = marketAction === 'offered' ? 'housing' : 'eclassifieds'; // Simplified based on logic or user choice, reusing map
+            if (type === 'marketplace') marketType = marketAction === 'offered' ? 'housing' : 'eclassifieds'; // Simplified based on logic or user choice, reusing map
             // Actually user logic was: housing vs eclassifieds. Let's stick to user ref logic:
             // "marketType" field holds 'housing', 'eclassifieds', 'business', 'guide'
 
-            if (type === 'market') marketType = 'eclassifieds'; // default
+            if (type === 'marketplace') marketType = 'eclassifieds'; // default
             if (type === 'directory') marketType = 'business';
             if (type === 'guide') marketType = 'guide';
 
@@ -67,7 +67,7 @@ export default function AddPostScreen() {
                 docData.marketType = marketType;
                 docData.price = price || undefined;
                 docData.location = location || undefined;
-                if (type === 'market') docData.type = marketAction; // offered / wanted
+                if (type === 'marketplace') docData.type = marketAction; // offered / wanted
                 if (type === 'directory' || type === 'guide') docData.category = category;
             }
 
@@ -130,7 +130,7 @@ export default function AddPostScreen() {
             <ScrollView className="p-4">
                 {/* Type Selector */}
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-6 flex-row gap-2">
-                    {['market', 'directory', 'guide'].map(t => (
+                    {['marketplace', 'directory', 'guide'].map(t => (
                         <TouchableOpacity
                             key={t}
                             onPress={() => setType(t)}
@@ -149,7 +149,7 @@ export default function AddPostScreen() {
                         onChangeText={setTitle}
                     />
 
-                    {type === 'market' && (
+                    {type === 'marketplace' && (
                         <View className="flex-row gap-3">
                             <TouchableOpacity onPress={() => setMarketAction('offered')} className={`flex-1 py-3 items-center rounded-xl border ${marketAction === 'offered' ? 'bg-indigo-50 border-indigo-500' : 'bg-slate-50 border-slate-200'}`}>
                                 <Text className={`font-bold ${marketAction === 'offered' ? 'text-indigo-700' : 'text-slate-500'}`}>Offering</Text>
@@ -172,7 +172,7 @@ export default function AddPostScreen() {
                         </View>
                     )}
 
-                    {type === 'market' && (
+                    {type === 'marketplace' && (
                         <View className="flex-row items-center bg-slate-50 border border-slate-200 rounded-xl px-4">
                             <Euro size={18} color="#94a3b8" />
                             <TextInput
