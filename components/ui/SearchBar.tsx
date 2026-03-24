@@ -1,26 +1,41 @@
 import { Search, XCircle } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { TextInput, TouchableOpacity, View, ViewStyle } from 'react-native';
+import {
+    StyleProp,
+    TextInput,
+    TextInputProps,
+    TouchableOpacity,
+    View,
+    ViewStyle,
+} from 'react-native';
 
-interface SearchBarProps {
+interface SearchBarProps extends Omit<TextInputProps, 'style'> {
+    /** Controlled value */
     value: string;
+    /** Called on every keystroke — debouncing is handled by the consumer hook */
     onChangeText: (text: string) => void;
     placeholder?: string;
-    containerStyle?: ViewStyle;
-    className?: string;
+    /** Style applied to the outer wrapper View */
+    wrapperStyle?: StyleProp<ViewStyle>;
 }
 
+/**
+ * Universal search bar component.
+ * Handles focus styling, the search icon, and a clear (×) button.
+ * Drop into any screen that needs a search input; pair with
+ * `useMarketplaceSearch` (or a similar hook) for debounced fuzzy filtering.
+ */
 export function SearchBar({
     value,
     onChangeText,
-    placeholder = "Search...",
-    containerStyle,
-    className
+    placeholder = 'Search…',
+    wrapperStyle,
+    ...textInputProps
 }: SearchBarProps) {
     const [isFocused, setIsFocused] = useState(false);
 
     return (
-        <View className={`px-6 py-2 ${className}`} style={containerStyle}>
+        <View style={wrapperStyle}>
             <View
                 style={{
                     flexDirection: 'row',
@@ -38,6 +53,7 @@ export function SearchBar({
                     color={isFocused ? '#4f46e5' : '#94a3b8'}
                     strokeWidth={isFocused ? 2.5 : 2}
                 />
+
                 <TextInput
                     style={{
                         flex: 1,
@@ -53,11 +69,18 @@ export function SearchBar({
                     onChangeText={onChangeText}
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setIsFocused(false)}
+                    returnKeyType="search"
+                    autoCorrect={false}
+                    autoCapitalize="none"
+                    clearButtonMode="never"
+                    {...textInputProps}
                 />
+
                 {value.length > 0 && (
                     <TouchableOpacity
                         onPress={() => onChangeText('')}
                         style={{ padding: 4 }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
                         <XCircle size={18} color="#94a3b8" />
                     </TouchableOpacity>

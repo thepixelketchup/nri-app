@@ -2,12 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { collection, getDocs, limit, orderBy, query, startAfter, where } from 'firebase/firestore';
-import { AlertCircle, Eye, Filter, MapPin, MessageCircle, Search, ShoppingBag, XCircle } from 'lucide-react-native';
+import { AlertCircle, Eye, Filter, MapPin, MessageCircle, ShoppingBag } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { SearchBar } from '../../components/ui/SearchBar';
 import { STRINGS } from '../../constants/Strings';
 import { useMarketplace } from '../../context/MarketplaceContext';
+import { useMarketplaceSearch } from '../../hooks/useMarketplaceSearch';
 import { db } from '../../utils/firebaseConfig';
 
 export default function MarketplaceScreen() {
@@ -22,16 +24,14 @@ export default function MarketplaceScreen() {
     const [hasMore, setHasMore] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [debouncedSearch, setDebouncedSearch] = useState('');
-    const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-    // Debounce search input
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearch(searchQuery);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [searchQuery]);
+    // Fuse.js fuzzy search — debounced internally, scoped to title/description/keywords
+    // Location affinity boosts items matching the active filter location
+    const { filteredItems } = useMarketplaceSearch(items, searchQuery, {
+        preferredLocation: filters.location || undefined,
+    });
+
+
 
     const fetchListings = useCallback(async (isLoadMore = false, isRefresh = false) => {
         if (!isLoadMore) setLoading(true);
@@ -42,7 +42,7 @@ export default function MarketplaceScreen() {
             const marketRef = collection(db, 'public', 'data', 'market');
             let constraints: any[] = [];
 
-            // 1. Filters
+            // 1. Filters (category, type, location handled server-side)
             if (filters.category !== 'all') {
                 constraints.push(where('marketType', '==', filters.category));
             }
@@ -53,21 +53,11 @@ export default function MarketplaceScreen() {
                 constraints.push(where('location', '==', filters.location));
             }
 
-            // 2. Search (Keywords Array)
-            if (debouncedSearch.trim()) {
-                // Split search into words and take the first one for array-contains
-                // limits Firestore (only 1 array-contains per query)
-                const searchWord = debouncedSearch.trim().toLowerCase().split(/\s+/)[0];
-                if (searchWord) {
-                    constraints.push(where('keywords', 'array-contains', searchWord));
-                }
-            } else {
-                // Default Sort only when not searching (array-contains limits ordering)
-                constraints.push(orderBy('createdAt', 'desc'));
-            }
+            // 2. Always sort by newest — client-side Fuse.js handles text search
+            constraints.push(orderBy('createdAt', 'desc'));
 
-            // 3. Pagination
-            constraints.push(limit(20));
+            // 3. Pagination — larger page gives Fuse.js a richer corpus to rank
+            constraints.push(limit(50));
             if (isLoadMore && lastDoc) {
                 constraints.push(startAfter(lastDoc));
             }
@@ -84,7 +74,7 @@ export default function MarketplaceScreen() {
             }
 
             setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
-            setHasMore(list.length === 20);
+            setHasMore(list.length === 50);
 
         } catch (err: any) {
             console.error("Market fetch error:", err);
@@ -94,13 +84,13 @@ export default function MarketplaceScreen() {
             setLoadingMore(false);
             setRefreshing(false);
         }
-    }, [filters, debouncedSearch, lastDoc]);
+    }, [filters, lastDoc]);
 
     // Initial Fetch & Filter Change
     useEffect(() => {
         setLastDoc(null);
         fetchListings(false);
-    }, [filters, debouncedSearch]);
+    }, [filters]);
 
     const handleRefresh = () => {
         setRefreshing(true);
@@ -244,50 +234,12 @@ export default function MarketplaceScreen() {
             </View>
 
             {/* Search Bar */}
-            <View className="px-6 py-2">
-                <View
-                    style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        borderRadius: 16,
-                        paddingHorizontal: 16,
-                        height: 52,
-                        borderWidth: 1,
-                        backgroundColor: isSearchFocused ? 'white' : '#f8fafc',
-                        borderColor: isSearchFocused ? '#818cf8' : '#f1f5f9',
-                    }}
-                >
-                    <Search
-                        size={18}
-                        color={isSearchFocused ? '#4f46e5' : '#94a3b8'}
-                        strokeWidth={isSearchFocused ? 2.5 : 2}
-                    />
-                    <TextInput
-                        style={{
-                            flex: 1,
-                            marginLeft: 10,
-                            fontSize: 15,
-                            color: '#0f172a',
-                            fontWeight: '500',
-                            paddingVertical: 0,
-                        }}
-                        placeholder={STRINGS.MARKETPLACE.SEARCH.PLACEHOLDER}
-                        placeholderTextColor="#94a3b8"
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        onFocus={() => setIsSearchFocused(true)}
-                        onBlur={() => setIsSearchFocused(false)}
-                    />
-                    {searchQuery.length > 0 && (
-                        <TouchableOpacity
-                            onPress={() => setSearchQuery('')}
-                            style={{ padding: 4 }}
-                        >
-                            <XCircle size={18} color="#94a3b8" />
-                        </TouchableOpacity>
-                    )}
-                </View>
-            </View>
+            <SearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder={STRINGS.MARKETPLACE.SEARCH.PLACEHOLDER}
+                wrapperStyle={{ paddingHorizontal: 24, paddingVertical: 8 }}
+            />
 
             {loading ? (
                 <View className="flex-1 items-center justify-center">
@@ -313,7 +265,7 @@ export default function MarketplaceScreen() {
                 </View>
             ) : (
                 <FlatList
-                    data={items}
+                    data={filteredItems}
                     keyExtractor={i => i.id}
                     renderItem={renderMarketItem}
                     contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 100, flexGrow: 1 }}
