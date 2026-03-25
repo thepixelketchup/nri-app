@@ -13,106 +13,21 @@ import MarketPlaceCard from '../marketplace/marketPlaceCard';
 
 export default function MarketplaceScreen() {
     const router = useRouter();
-    const { filters } = useMarketplace();
+    const { filters, items, loading, refreshing, error, fetchListings, updateFilter } = useMarketplace();
 
-    const [items, setItems] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [lastDoc, setLastDoc] = useState<any>(null);
-    const [hasMore, setHasMore] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [searchQuery, setSearchQuery] = useState(filters.searchQuery || '');
     const [isSearchFocused, setIsSearchFocused] = useState(false);
 
     // Debounce search input
     useEffect(() => {
         const timer = setTimeout(() => {
-            setDebouncedSearch(searchQuery);
+            updateFilter('searchQuery', searchQuery);
         }, 500);
         return () => clearTimeout(timer);
-    }, [searchQuery]);
-
-    const fetchListings = useCallback(async (isLoadMore = false, isRefresh = false) => {
-        if (!isLoadMore) setLoading(true);
-        if (isLoadMore) setLoadingMore(true);
-        setError(null);
-
-        try {
-            const marketRef = collection(db, 'public', 'data', 'market');
-            let constraints: any[] = [];
-
-            // 1. Filters
-            if (filters.category !== 'all') {
-                constraints.push(where('marketType', '==', filters.category));
-            }
-            if (filters.type !== 'all') {
-                constraints.push(where('type', '==', filters.type));
-            }
-            if (filters.location) {
-                constraints.push(where('location', '==', filters.location));
-            }
-
-            // 2. Search (Keywords Array)
-            if (debouncedSearch.trim()) {
-                // Split search into words and take the first one for array-contains
-                // limits Firestore (only 1 array-contains per query)
-                const searchWord = debouncedSearch.trim().toLowerCase().split(/\s+/)[0];
-                if (searchWord) {
-                    constraints.push(where('keywords', 'array-contains', searchWord));
-                }
-            } else {
-                // Default Sort only when not searching (array-contains limits ordering)
-                constraints.push(orderBy('createdAt', 'desc'));
-            }
-
-            // 3. Pagination
-            constraints.push(limit(20));
-            if (isLoadMore && lastDoc) {
-                constraints.push(startAfter(lastDoc));
-            }
-
-            const q = query(marketRef, ...constraints);
-            const snapshot = await getDocs(q);
-
-            const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-            if (isLoadMore) {
-                setItems(prev => [...prev, ...list]);
-            } else {
-                setItems(list);
-            }
-
-            setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
-            setHasMore(list.length === 20);
-
-        } catch (err: any) {
-            console.error("Market fetch error:", err);
-            setError(STRINGS.MARKETPLACE.ERRORS.GENERIC);
-        } finally {
-            setLoading(false);
-            setLoadingMore(false);
-            setRefreshing(false);
-        }
-    }, [filters, debouncedSearch, lastDoc]);
-
-    // Initial Fetch & Filter Change
-    useEffect(() => {
-        setLastDoc(null);
-        fetchListings(false);
-    }, [filters, debouncedSearch]);
+    }, [searchQuery, updateFilter]);
 
     const handleRefresh = () => {
-        setRefreshing(true);
-        setLastDoc(null);
-        fetchListings(false, true);
-    };
-
-    const handleLoadMore = () => {
-        if (!loadingMore && hasMore && !loading && lastDoc) {
-            fetchListings(true);
-        }
+        fetchListings(true);
     };
 
     // const renderMarketItem = ({ item }: { item: any }) => (
@@ -206,7 +121,13 @@ export default function MarketplaceScreen() {
     const activeFilterCount = [
         filters.category !== 'all',
         filters.type !== 'all',
-        filters.location !== ''
+        filters.location !== '',
+        filters.minPrice !== '',
+        filters.maxPrice !== '',
+        filters.condition !== 'all',
+        filters.housingType !== 'all',
+        filters.propertyType !== 'all',
+        filters.bedrooms !== 'all'
     ].filter(Boolean).length;
 
     return (
@@ -314,7 +235,7 @@ export default function MarketplaceScreen() {
                         {error}
                     </Text>
                     <TouchableOpacity
-                        onPress={() => fetchListings(false, true)}
+                        onPress={() => fetchListings(true)}
                         className="bg-slate-900 px-6 py-3 rounded-full"
                     >
                         <Text className="text-white font-bold text-sm">Retry</Text>
@@ -329,9 +250,6 @@ export default function MarketplaceScreen() {
                     showsVerticalScrollIndicator={false}
                     onRefresh={handleRefresh}
                     refreshing={refreshing}
-                    onEndReached={handleLoadMore}
-                    onEndReachedThreshold={0.5}
-                    ListFooterComponent={loadingMore ? <ActivityIndicator className="py-4" color="#4f46e5" /> : null}
                     ListEmptyComponent={
                         <View className="flex-1 items-center justify-center py-20 opacity-50">
                             <ShoppingBag size={48} color="#cbd5e1" />
