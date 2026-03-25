@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { STRINGS } from '../../constants/Strings';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../utils/firebaseConfig';
+import Slider from '@react-native-community/slider';
 
 export default function AddMarketListingScreen() {
     const router = useRouter();
@@ -20,6 +21,8 @@ export default function AddMarketListingScreen() {
     const [marketType, setMarketType] = useState('housing'); // housing | eclassifieds
     const [type, setType] = useState('offered'); // offered | wanted
     const [loading, setLoading] = useState(false);
+    const [value, setValue] = useState(0);
+    const maxValue = marketType === 'housing' ? 1000 : 100;
 
     const handleSubmit = async () => {
         if (!title || !price || !location || !user) {
@@ -32,7 +35,9 @@ export default function AddMarketListingScreen() {
             const marketData = {
                 title,
                 description,
-                price: parseFloat(price) || 0,
+                price: type === "wanted" 
+                        ? value 
+                        : parseFloat(price) || 0,
                 location,
                 imageUrl: imageUrl || null,
                 marketType,
@@ -126,15 +131,33 @@ export default function AddMarketListingScreen() {
                     <View className="flex-row gap-4">
                         <View className="flex-1">
                             <Text className="text-sm font-bold text-slate-900 mb-2">{STRINGS.MARKETPLACE.ADD.FORM.PRICE_LABEL}</Text>
-                            <View className="flex-row items-center bg-slate-50 border border-slate-200 rounded-2xl px-4">
+                            <View className="flex-row items-center bg-slate-50 border border-slate-200 rounded-2xl px-4 justify-between">
                                 <Euro size={18} color="#64748b" />
-                                <TextInput
-                                    className="flex-1 py-4 ml-2 text-base text-slate-900"
-                                    placeholder="0"
-                                    value={price}
-                                    onChangeText={setPrice}
-                                    keyboardType="numeric"
-                                />
+                                <Text>{value}</Text>
+                                {type === "wanted" ? (
+                                        
+                                            <Slider
+                                                minimumValue={0}
+                                                maximumValue={maxValue}
+                                                step={marketType === "housing" ? 100 : 10}
+                                                value={value}
+                                                onValueChange={(val) => setValue(val)}
+                                                minimumTrackTintColor="#6366f1"
+                                                maximumTrackTintColor="gray"
+                                                thumbTintColor="#6366f1"
+                                                style={{ flex: 1, height: 50}}
+                                            />
+                                        
+                                    
+                                ): (
+                                    <TextInput
+                                        className="flex-1 py-4 ml-2 text-base text-slate-900"
+                                        placeholder="0"
+                                        value={price}
+                                        onChangeText={setPrice}
+                                        keyboardType="numeric"
+                                    />
+                                )}
                             </View>
                         </View>
                         <View className="flex-2">
