@@ -22,7 +22,11 @@ export default function AddMarketListingScreen() {
     const [type, setType] = useState('offered'); // offered | wanted
     const [loading, setLoading] = useState(false);
     const [value, setValue] = useState(0);
-    const maxValue = marketType === 'housing' ? 1000 : 100;
+    const maxValue = marketType === 'housing' ? 10000 : 1000;
+    const step = marketType === 'housing' ? 1000 : 100;
+    const displayPrice = value === 0
+                        ? `${value}`
+                        : `${value - step / 10} -  ${value + step / 10}`;
 
     const handleSubmit = async () => {
         if (!title || !price || !location || !user) {
@@ -129,13 +133,23 @@ export default function AddMarketListingScreen() {
 
                     {/* Price & Location Row */}
                     <View className="flex-row gap-4">
-                        <View className="flex-1">
+                        <View className="flex-[1]">
                             <Text className="text-sm font-bold text-slate-900 mb-2">{STRINGS.MARKETPLACE.ADD.FORM.PRICE_LABEL}</Text>
-                            <View className="flex-row items-center bg-slate-50 border border-slate-200 rounded-2xl px-4 justify-between">
-                                <Euro size={18} color="#64748b" />
-                                <Text>{value}</Text>
+                            <View
+                                className={`bg-slate-50 border border-slate-200 rounded-2xl px-2 ${
+                                    type === 'offered' ? 'flex-row items-center' : 'py-2'
+                                }`}
+                                >
+                                {type === 'wanted' ?
+                                (
+                                    <View className="flex-row items-center ml-2 gap-2">
+                                        <Euro size={18} color="#64748b" />
+                                        <Text>{displayPrice}</Text>
+                                    </View>
+                                ) : (
+                                    <Euro size={18} color="#64748b" />
+                                )}
                                 {type === "wanted" ? (
-                                        
                                             <Slider
                                                 minimumValue={0}
                                                 maximumValue={maxValue}
@@ -145,7 +159,7 @@ export default function AddMarketListingScreen() {
                                                 minimumTrackTintColor="#6366f1"
                                                 maximumTrackTintColor="gray"
                                                 thumbTintColor="#6366f1"
-                                                style={{ flex: 1, height: 50}}
+                                                style={{ height: 40, width: '100%'}}
                                             />
                                         
                                     
@@ -160,7 +174,7 @@ export default function AddMarketListingScreen() {
                                 )}
                             </View>
                         </View>
-                        <View className="flex-2">
+                        <View className="flex-[1]">
                             <Text className="text-sm font-bold text-slate-900 mb-2">{STRINGS.MARKETPLACE.ADD.FORM.LOCATION_LABEL}</Text>
                             <View className="flex-row items-center bg-slate-50 border border-slate-200 rounded-2xl px-4">
                                 <MapPin size={18} color="#64748b" />
